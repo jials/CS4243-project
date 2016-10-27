@@ -12,7 +12,8 @@ color = np.uint8([255, 128, 0]) #blue
 
 
 def markFeaturesOnAllImages(images, features_coordinates):
-    result = []
+    marked_images = []
+    marked_frame_coordinates = []
 
     last_gs_img = cv2.cvtColor(images[0], cv2.COLOR_BGR2GRAY)
 
@@ -23,6 +24,7 @@ def markFeaturesOnAllImages(images, features_coordinates):
 
     mask = np.zeros_like(images[0])
     for fr in range(1, len(images)):
+        marked_coordinates = []
         frame = images[fr]
         gs_img = cv2.cvtColor(images[fr], cv2.COLOR_BGR2GRAY)
 
@@ -31,27 +33,17 @@ def markFeaturesOnAllImages(images, features_coordinates):
         new_points = p1[st==1]
         old_points = p0[st==1]
 
-        # for i,(new,old) in enumerate(zip(new_point,old_point)):
-        #     a,b = new.ravel()
-        #     c,d = old.ravel()
-        #     cv2.line(mask, (a,b),(c,d), color[i].tolist(), 2)
-        #     cv2.circle(frame,(a,b),5,color[i].tolist(),-1)
-
         for point in new_points:
             x, y = point.ravel()
+            marked_coordinates.append([x,y])
             cv2.circle(frame, (x, y), 5, color.tolist(), -1)
+        marked_frame_coordinates.append(marked_coordinates)
 
         img = cv2.add(frame,mask)
-        result.append(img)
-        # cv2.imshow('frame',img)
+        marked_images.append(img)
 
         # update last frame and point
         last_gs_img = gs_img.copy()
         p0 = new_points.reshape(-1,1,2)
 
-        # k = cv2.waitKey(0) & 0xff
-        # if k == ord('q'):
-        #     break
-
-    # cv2.destroyAllWindows()
-    return result
+    return marked_images, marked_frame_coordinates

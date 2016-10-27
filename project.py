@@ -206,6 +206,7 @@ if len(arguments) == 4:
         first_frame = video_images[0]
         selected_pixels = handpickPixel.handpickImage(first_frame)
         height, width, _ = first_frame.shape
-        marked_images = changeDetection.markFeaturesOnAllImages(video_images, selected_pixels)
+        marked_images, marked_frame_coordinates = changeDetection.markFeaturesOnAllImages(video_images, selected_pixels)
         video_path = os.path.join(video_file_name, video_file_name + '_traced')
         imagesToVideo.convertImagesToVideo(marked_images, fps, video_path)
+        # print(np.array(marked_frame_coordinates))
