@@ -1,3 +1,21 @@
+# result files
+beachVolleyball1/
+beachVolleyball2/
+beachVolleyball3/
+beachVolleyball4/
+beachVolleyball5/
+beachVolleyball6/
+beachVolleyball7/
+
+# video files
+beachVolleyball1.mov
+beachVolleyball2.mov
+beachVolleyball3.mov
+beachVolleyball4.mov
+beachVolleyball5.mov
+beachVolleyball6.mov
+beachVolleyball7.mov
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
