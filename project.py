@@ -4,6 +4,8 @@ import numpy as np
 import sys
 import os
 import imagesToVideo
+import handpickPixel
+import changeDetection
 from math import sqrt
 
 def getStrength(horizontal_sum, vertical_sum):
@@ -186,17 +188,24 @@ def videoToCornerDetection(video_file_name, extension):
     return images, fps
 
 arguments = sys.argv
-if len(arguments) > 1:
+if len(arguments) == 4:
     task = arguments[1]
-    if task == 'edge' and len(arguments) == 4:
-        video_file_name = arguments[2]
-        extension = arguments[3]
+    video_file_name = arguments[2]
+    extension = arguments[3]
+
+    if task == 'edge':
         images, fps = videoToSobelEdgeDetection(video_file_name, extension)
         video_path = os.path.join(video_file_name, video_file_name + '_sobel_edge')
         imagesToVideo.convertGrayscaleImagesToVideo(images, fps, video_path)
-    elif task == 'corner' and len(arguments) == 4:
-        video_file_name = arguments[2]
-        extension = arguments[3]
+    elif task == 'corner':
         images, fps = videoToCornerDetection(video_file_name, extension)
         video_path = os.path.join(video_file_name, video_file_name + '_corner')
         imagesToVideo.convertImagesToVideo(images, fps, video_path)
+    elif task == 'handpick':
+        video_images, fps = getAllFrameImagesAndFps(video_file_name, extension)
+        first_frame = video_images[0]
+        selected_pixels = handpickPixel.handpickImage(first_frame)
+        height, width, _ = first_frame.shape
+        marked_images = changeDetection.markFeaturesOnAllImages(video_images, selected_pixels)
+        video_path = os.path.join(video_file_name, video_file_name + '_traced')
+        imagesToVideo.convertImagesToVideo(marked_images, fps, video_path)
