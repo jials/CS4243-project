@@ -1,26 +1,31 @@
+import getopt
+import numpy as np
+import os
+import sys
+
 import cv2
 import cv2.cv as cv
-import numpy as np
-import sys
-import os
-import imagesToVideo
-import handpickPixel
-import changeDetection
-import edgeDetection
-import cornerDetection
 
-def videoToSobelEdgeDetection(video_file_name, extension):
-    video_images, fps = getAllFrameImagesAndFps(video_file_name, extension)
+import changeDetection
+import cornerDetection
+import edgeDetection
+import handpickPixel
+import imagesToVideo
+
+
+def video_to_sobel_edge_detection(video_file):
+    video_images, fps = get_all_frame_images_and_fps(video_file)
+    video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name):
         os.mkdir(video_file_name)
     if not os.path.isdir('./' + video_file_name + '/edge'):
         os.mkdir(video_file_name + '/edge')
 
-    edge_images = edgeDetection.detectEdgesFromImages(video_images, video_file_name)
+    edge_images = edgeDetection.detect_edges(video_images, video_file_name)
     return edge_images, fps
 
-def getAllFrameImagesAndFps(video_file_name, extension):
-    cap = cv2.VideoCapture(video_file_name + extension)
+def get_all_frame_images_and_fps(video_file):
+    cap = cv2.VideoCapture(video_file)
     frame_width = int(cap.get(cv.CV_CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv.CV_CAP_PROP_FRAME_HEIGHT))
     fps = int(cap.get(cv.CV_CAP_PROP_FPS))
@@ -32,15 +37,15 @@ def getAllFrameImagesAndFps(video_file_name, extension):
     print('Frame Count', frame_count)
 
     images = []
-    for fr in range(0,frame_count):
-        _,img = cap.read()
+    for fr in range(0, frame_count):
+        _, img = cap.read()
         images.append(img)
     cap.release()
-    return images, fps;
+    return images, fps
 
-def markCornersOnAllImages(images, folder_name):
-    marked_images = [];
-    marked_frame_coordinates = [];
+def mark_corners_on_all_images(images, folder_name):
+    marked_images = []
+    marked_frame_coordinates = []
     for i in range(len(images)):
     # for i in range(3):
         print('frame', i, 'out of', len(images))
@@ -48,37 +53,61 @@ def markCornersOnAllImages(images, folder_name):
         marked_image, marked_coordinates = cornerDetection.markCornerOnImage(images[i], image_name)
         marked_frame_coordinates.append(marked_coordinates)
         marked_images.append(marked_image)
-    return marked_images;
+    return marked_images
 
-def videoToCornerDetection(video_file_name, extension):
-    video_images, fps = getAllFrameImagesAndFps(video_file_name, extension)
+def video_to_corner_detection(video_file):
+    video_images, fps = get_all_frame_images_and_fps(video_file)
+    video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name):
         os.mkdir(video_file_name)
     if not os.path.isdir('./' + video_file_name + '/corners'):
         os.mkdir(video_file_name + '/corners')
-    marked_images = markCornersOnAllImages(video_images, video_file_name)
+    marked_images = mark_corners_on_all_images(video_images, video_file_name)
     return marked_images, fps
 
-arguments = sys.argv
-if len(arguments) == 4:
-    task = arguments[1]
-    video_file_name = arguments[2]
-    extension = arguments[3]
+def usage():
+    print "usage: " + sys.argv[0] + \
+        " -o <operation>" + \
+        " -f <filename>"
 
-    if task == 'edge':
-        images, fps = videoToSobelEdgeDetection(video_file_name, extension)
+def main():
+    video_file = operation = None
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'o:f:')
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+
+    for o, a in opts:
+        if o == '-o':
+            operation = a
+        elif o == '-f':
+            video_file = a
+        else:
+            assert False, "unhandled option"
+
+    if video_file is None or operation is None:
+        usage()
+        sys.exit(2)
+
+    video_file_name, _ = video_file.split('.')
+    if operation == 'edge':
+        images, fps = video_to_sobel_edge_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_sobel_edge')
-        imagesToVideo.convertGrayscaleImagesToVideo(images, fps, video_path)
-    elif task == 'corner':
-        images, fps = videoToCornerDetection(video_file_name, extension)
+        imagesToVideo.grayscale_image_to_video(images, fps, video_path)
+    elif operation == 'corner':
+        images, fps = video_to_corner_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_corner')
-        imagesToVideo.convertImagesToVideo(images, fps, video_path)
-    elif task == 'handpick':
-        video_images, fps = getAllFrameImagesAndFps(video_file_name, extension)
+        imagesToVideo.images_to_video(images, fps, video_path)
+    elif operation == 'handpick':
+        video_images, fps = get_all_frame_images_and_fps(video_file)
         first_frame = video_images[0]
-        selected_pixels = handpickPixel.handpickImage(first_frame)
+        selected_pixels = handpickPixel.handpick_image(first_frame)
         height, width, _ = first_frame.shape
-        marked_images, marked_frame_coordinates = changeDetection.markFeaturesOnAllImages(video_images, selected_pixels)
+        marked_images, marked_frame_coordinates = changeDetection.mark_features_on_all_images(video_images, selected_pixels)
         video_path = os.path.join(video_file_name, video_file_name + '_traced')
-        imagesToVideo.convertImagesToVideo(marked_images, fps, video_path)
-        # print(np.array(marked_frame_coordinates))
+        imagesToVideo.images_to_video(marked_images, fps, video_path)
+        print(np.array(marked_frame_coordinates))
+
+if __name__ == '__main__':
+    main()

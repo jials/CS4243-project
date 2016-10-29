@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-def convertGrayscaleImagesToVideo(images, fps, videoName):
+def grayscale_image_to_video(images, fps, videoName):
     height , width =  images[0].shape
 
     fourcc = cv2.cv.CV_FOURCC(*'XVID')
@@ -12,7 +12,7 @@ def convertGrayscaleImagesToVideo(images, fps, videoName):
         video.write(rgb_image)
     video.release()
 
-def convertImagesToVideo(images, fps, videoName):
+def images_to_video(images, fps, videoName):
     height, width, _ = images[0].shape
 
     fourcc = cv2.cv.CV_FOURCC(*'XVID')

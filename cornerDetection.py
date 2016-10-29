@@ -16,7 +16,7 @@ def gauss_kernels(size,sigma=1.0):
         kernel = kernel/kernel_sum
     return kernel
 
-def getResponseMatrix(W_xx, W_xy, W_yy, interval, image_shape):
+def get_response_matrix(W_xx, W_xy, W_yy, interval, image_shape):
     k = 0.06
     responseMatrix = np.zeros(image_shape)
     maxResponse = 0
@@ -34,7 +34,7 @@ def getResponseMatrix(W_xx, W_xy, W_yy, interval, image_shape):
                 maxResponse = response
     return responseMatrix, maxResponse
 
-def markCorner(img, responseMatrix, maxResponse, interval):
+def mark_corner(img, responseMatrix, maxResponse, interval):
     rows = []
     cols = []
     marked_coordinates = []
@@ -42,15 +42,15 @@ def markCorner(img, responseMatrix, maxResponse, interval):
         for x_offset in range(interval, len(responseMatrix[0]), interval):
             currentResponse = responseMatrix[y_offset][x_offset]
             if currentResponse > 0.1 * maxResponse:
-                img = imageMarker.markImageAtPoint(img, y_offset, x_offset, 15) #size of 9 not as obvious
+                img = imageMarker.mark_image_at_point(img, y_offset, x_offset, 15) #size of 9 not as obvious
                 marked_coordinates.append([x_offset, y_offset])
     return img, marked_coordinates
 
 def markCornerOnImage(image, image_name):
     color_img = image
     gs_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2GRAY)
-    gx = np.absolute(convolution.getSobelHorizontalEdgeStrength(gs_img))
-    gy = np.absolute(convolution.getSobelVerticalEdgeStrength(gs_img))
+    gx = np.absolute(convolution.get_sobel_horizontal_edge_strength(gs_img))
+    gy = np.absolute(convolution.get_sobel_vertical_edge_strength(gs_img))
     I_xx = gx * gx
     I_xy = gx * gy
     I_yy = gy * gy
@@ -58,7 +58,7 @@ def markCornerOnImage(image, image_name):
     W_xy = convolution.convolve(I_xy, gauss_kernels(3))
     W_yy = convolution.convolve(I_yy, gauss_kernels(3))
     interval = 10
-    responseMatrix, maxResponse = getResponseMatrix(W_xx, W_xy, W_yy, interval, gs_img.shape)
-    marked_img, marked_coordinates = markCorner(color_img, responseMatrix, maxResponse, interval)
+    responseMatrix, maxResponse = get_response_matrix(W_xx, W_xy, W_yy, interval, gs_img.shape)
+    marked_img, marked_coordinates = mark_corner(color_img, responseMatrix, maxResponse, interval)
     cv2.imwrite(image_name, marked_img)
     return marked_img, marked_coordinates

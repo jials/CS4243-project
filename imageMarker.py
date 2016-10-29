@@ -1,6 +1,6 @@
 import numpy as np
 
-def markImageAtPoint(img, y, x, size):
+def mark_image_at_point(img, y, x, size):
     blue = np.uint8([255, 128, 0])
     if size < 1:
         size = 1

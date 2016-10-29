@@ -5,19 +5,19 @@ import imageMarker
 selected_pixels = []
 original_image = []
 image = []
-def mouseClick(event, x, y, flags, param):
+def mouse_click(event, x, y, flags, param):
     if event == 1: #mouse click
         global image, selected_pixels
-        image = imageMarker.markImageAtPoint(image, y, x, 9)
+        image = imageMarker.mark_image_at_point(image, y, x, 9)
         selected_pixels.append([x, y])
 
-def handpickImage(img):
+def handpick_image(img):
     global image
     original_image = img
     image = img.copy()
     cv2.namedWindow('first frame')
-    cv2.setMouseCallback('first frame', mouseClick)
-    i = 0;
+    cv2.setMouseCallback('first frame', mouse_click)
+    i = 0
     while True:
         cv2.imshow('first frame', image)
         key = cv2.waitKey(1) & 0xFF

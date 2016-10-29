@@ -11,7 +11,7 @@ lucas_kanade_params = dict(
 color = np.uint8([255, 128, 0]) #blue
 
 
-def markFeaturesOnAllImages(images, features_coordinates):
+def mark_features_on_all_images(images, features_coordinates):
     marked_images = []
     marked_frame_coordinates = []
 
