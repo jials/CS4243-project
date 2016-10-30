@@ -16,8 +16,6 @@ import imagesToVideo
 def video_to_sobel_edge_detection(video_file):
     video_images, fps = get_all_frame_images_and_fps(video_file)
     video_file_name, _ = video_file.split('.')
-    if not os.path.isdir('./' + video_file_name):
-        os.mkdir(video_file_name)
     if not os.path.isdir('./' + video_file_name + '/edge'):
         os.mkdir(video_file_name + '/edge')
 
@@ -58,12 +56,15 @@ def mark_corners_on_all_images(images, folder_name):
 def video_to_corner_detection(video_file):
     video_images, fps = get_all_frame_images_and_fps(video_file)
     video_file_name, _ = video_file.split('.')
-    if not os.path.isdir('./' + video_file_name):
-        os.mkdir(video_file_name)
     if not os.path.isdir('./' + video_file_name + '/corners'):
         os.mkdir(video_file_name + '/corners')
     marked_images = mark_corners_on_all_images(video_images, video_file_name)
     return marked_images, fps
+
+def initFolder(video_file):
+    video_file_name, _ = video_file.split('.')
+    if not os.path.isdir('./' + video_file_name):
+        os.mkdir(video_file_name)
 
 def usage():
     print "usage: " + sys.argv[0] + \
@@ -91,6 +92,8 @@ def main():
         sys.exit(2)
 
     video_file_name, _ = video_file.split('.')
+    initFolder(video_file)
+
     if operation == 'edge':
         images, fps = video_to_sobel_edge_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_sobel_edge')
@@ -107,7 +110,10 @@ def main():
         marked_images, marked_frame_coordinates = changeDetection.mark_features_on_all_images(video_images, selected_pixels)
         video_path = os.path.join(video_file_name, video_file_name + '_traced')
         imagesToVideo.images_to_video(marked_images, fps, video_path)
-        print(np.array(marked_frame_coordinates))
+        # print(np.array(marked_frame_coordinates))
+    else:
+        print 'Operation is not supported.'
+        sys.exit(2)
 
 if __name__ == '__main__':
     main()
