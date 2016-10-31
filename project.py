@@ -10,6 +10,7 @@ import changeDetection
 import cornerDetection
 import edgeDetection
 import handpickPixel
+import homography
 import imagesToVideo
 
 
@@ -111,6 +112,9 @@ def main():
         video_path = os.path.join(video_file_name, video_file_name + '_traced')
         imagesToVideo.images_to_video(marked_images, fps, video_path)
         # print(np.array(marked_frame_coordinates))
+
+        H = homography.find_homography(marked_frame_coordinates[0], marked_frame_coordinates[1])
+        print H
     else:
         print 'Operation is not supported.'
         sys.exit(2)
