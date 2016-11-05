@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 lucas_kanade_params = dict(
-    winSize= (10, 10),
+    winSize= (4, 4),
     maxLevel= 0, #level of pyramids used
     criteria= (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03)
 )
@@ -29,6 +29,9 @@ def mark_features_on_all_images(images, features_coordinates):
         gs_img = cv2.cvtColor(images[fr], cv2.COLOR_BGR2GRAY)
 
         p1, st, err = cv2.calcOpticalFlowPyrLK(last_gs_img, gs_img, p0, None, **lucas_kanade_params)
+
+        if p1 is None:
+            continue
 
         new_points = p1[st==1]
         old_points = p0[st==1]
