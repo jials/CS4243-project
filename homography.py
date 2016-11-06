@@ -2,8 +2,6 @@ import numpy as np
 import numpy.linalg as la
 
 def find_homography(plane1, plane2):
-    plane1 = [[int(i) for i in x] for x in plane1]
-    plane2 = [[int(i) for i in x] for x in plane2]
     num_points = len(plane1)
     M = np.zeros([num_points * 2, 9])
     for i, j in zip(range(0, num_points * 2, 2), range(0, num_points)):

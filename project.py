@@ -2,6 +2,9 @@ import getopt
 import numpy as np
 import os
 import sys
+import threading
+import multiprocessing
+from joblib import Parallel, delayed
 
 import cv2
 import cv2.cv as cv
@@ -62,6 +65,25 @@ def video_to_corner_detection(video_file):
     marked_images = mark_corners_on_all_images(video_images, video_file_name)
     return marked_images, fps
 
+def homography_mapping(video_image, first_frame, homography_matrix):
+    """
+    Calculate the new position of where the pixel should be at after multiplying the original position with the
+    homography matrix
+    """
+    new_video_image = np.zeros_like(first_frame)
+    height, width, _ = first_frame.shape
+    for h in range(height):
+        for w in range(width):
+            # convert pixel to 3-D point by appending depth as 1
+            point = np.append([h, w], [1])
+            new_pos_x, new_pos_y, new_pos_z = np.dot(homography_matrix, point)
+            new_pos_x, new_pos_y = int(new_pos_x), int(new_pos_y)
+            try:
+                new_video_image[new_pos_x][new_pos_y] = video_image[h][w]
+            except IndexError:
+                continue
+    return new_video_image
+
 def initFolder(video_file):
     video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name):
@@ -99,14 +121,17 @@ def main():
         images, fps = video_to_sobel_edge_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_sobel_edge')
         imagesToVideo.grayscale_image_to_video(images, fps, video_path)
+
     elif operation == 'corner':
         images, fps = video_to_corner_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_corner')
         imagesToVideo.images_to_video(images, fps, video_path)
+
     elif operation == 'handpick':
         video_images, fps = get_all_frame_images_and_fps(video_file)
         first_frame = video_images[0]
         selected_pixels = handpickPixel.handpick_image(first_frame)
+        print selected_pixels
         selected_pixels = [[192, 274], [167, 243], [130, 196], [342, 107], [435, 136]]
         height, width, _ = first_frame.shape
         marked_images, marked_frame_coordinates = changeDetection.mark_features_on_all_images(video_images, selected_pixels)
@@ -114,35 +139,29 @@ def main():
 
         homography_matrixes = []
         # skip the first frame
-        for mark_frame_coordinate in marked_frame_coordinates[1:300]:
+        for mark_frame_coordinate in marked_frame_coordinates[1:350]:
             # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
             H, inliers = cv2.findHomography(np.float32(marked_frame_coordinates[0]), np.float32(mark_frame_coordinate), cv.CV_RANSAC)
             homography_matrixes.append(H)
 
         new_video_images = []
         new_video_images.append(first_frame)
-        for idx, video_image in enumerate(video_images[1:300]):
-            new_video_image = np.zeros_like(first_frame)
-            for h in range(height):
-                for w in range(width):
-                    # convert pixel to 3-D point by appending depth as 1
-                    point = np.append([h, w], [1])
-                    new_pos_x, new_pos_y, new_pos_z = np.dot(homography_matrixes[idx], point)
-                    new_pos_x, new_pos_y = int(new_pos_x), int(new_pos_y)
-                    try:
-                        new_video_image[new_pos_x][new_pos_y] = video_image[h][w]
-                    except IndexError:
-                        continue
-            new_video_images.append(new_video_image)
-            print 'Done with frame ', idx
+
+        # paralleling the homography mapping
+        num_cores = multiprocessing.cpu_count()
+        new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(homography_mapping)(video_images[i], first_frame, homography_matrixes[i + 1]) for i in range(300))
 
         print 'Done with homography calculation. Writing to file now...'
-        video_path = os.path.join(video_file_name, video_file_name + '_traced')
+        video_path = os.path.join(video_file_name, video_file_name + '_homography')
         imagesToVideo.images_to_video(new_video_images, fps, video_path)
+
+        video_path = os.path.join(video_file_name, video_file_name + '_traced')
+        imagesToVideo.images_to_video(marked_images, fps, video_path)
 
     else:
         print 'Operation is not supported.'
         sys.exit(2)
+
 
 if __name__ == '__main__':
     main()
