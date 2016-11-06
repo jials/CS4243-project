@@ -107,14 +107,39 @@ def main():
         video_images, fps = get_all_frame_images_and_fps(video_file)
         first_frame = video_images[0]
         selected_pixels = handpickPixel.handpick_image(first_frame)
+        selected_pixels = [[192, 274], [167, 243], [130, 196], [342, 107], [435, 136]]
         height, width, _ = first_frame.shape
         marked_images, marked_frame_coordinates = changeDetection.mark_features_on_all_images(video_images, selected_pixels)
-        video_path = os.path.join(video_file_name, video_file_name + '_traced')
-        imagesToVideo.images_to_video(marked_images, fps, video_path)
-        # print(np.array(marked_frame_coordinates))
+        print(np.array(marked_frame_coordinates))
 
-        H = homography.find_homography(marked_frame_coordinates[0], marked_frame_coordinates[1])
-        print H
+        homography_matrixes = []
+        # skip the first frame
+        for mark_frame_coordinate in marked_frame_coordinates[1:300]:
+            # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
+            H, inliers = cv2.findHomography(np.float32(marked_frame_coordinates[0]), np.float32(mark_frame_coordinate), cv.CV_RANSAC)
+            homography_matrixes.append(H)
+
+        new_video_images = []
+        new_video_images.append(first_frame)
+        for idx, video_image in enumerate(video_images[1:300]):
+            new_video_image = np.zeros_like(first_frame)
+            for h in range(height):
+                for w in range(width):
+                    # convert pixel to 3-D point by appending depth as 1
+                    point = np.append([h, w], [1])
+                    new_pos_x, new_pos_y, new_pos_z = np.dot(homography_matrixes[idx], point)
+                    new_pos_x, new_pos_y = int(new_pos_x), int(new_pos_y)
+                    try:
+                        new_video_image[new_pos_x][new_pos_y] = video_image[h][w]
+                    except IndexError:
+                        continue
+            new_video_images.append(new_video_image)
+            print 'Done with frame ', idx
+
+        print 'Done with homography calculation. Writing to file now...'
+        video_path = os.path.join(video_file_name, video_file_name + '_traced')
+        imagesToVideo.images_to_video(new_video_images, fps, video_path)
+
     else:
         print 'Operation is not supported.'
         sys.exit(2)
