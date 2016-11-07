@@ -1,4 +1,5 @@
 import getopt
+import math
 import numpy as np
 import numpy.linalg as la
 import os
@@ -110,6 +111,55 @@ def inverse_homography_mapping(video_image, first_frame, inverse_homography_matr
                 continue
     return new_video_image
 
+def stichImages(base, other_images, H_arr):
+    h1, w1, _ = base.shape
+    min_x = 0
+    min_y = 0
+    max_x = w1
+    max_y = h1
+    for index, image in enumerate(other_images):
+        h, w, _ = image.shape
+        image_corners = np.float32([[0, 0], [w, 0], [w, h], [0, h]]).reshape(-1, 1, 2)
+        image_corners_after_h = cv2.perspectiveTransform(image_corners, H_arr[index])
+        # print(image_corners_after_h)
+        temp_min_x = np.amin([corner[0][0] for corner in image_corners_after_h])
+        temp_min_y = np.amin([corner[0][1] for corner in image_corners_after_h])
+        temp_max_x = np.amax([corner[0][0] for corner in image_corners_after_h])
+        temp_max_y = np.amax([corner[0][1] for corner in image_corners_after_h])
+
+        min_x = temp_min_x if temp_min_x < min_x else min_x
+        min_y = temp_min_y if temp_min_y < min_y else min_y
+        max_x = temp_max_x if temp_max_x > max_x else max_x
+        max_y = temp_max_y if temp_max_y > max_y else max_y
+
+        transformed_image_width = int(max_x - min_x)
+        transformed_image_height = int(max_y - min_y)
+        transformed_shape = (transformed_image_width, transformed_image_height)
+
+        top_left = [min_x, min_y]
+        translation_matrix = np.array([[1,0,-top_left[0]],[0,1,-top_left[1]],[0,0,1]])
+
+        transformed_img = cv2.warpPerspective(image, np.dot(translation_matrix, H_arr[index]), transformed_shape)
+        transformed_img[-top_left[1]:h1-top_left[1],-top_left[0]:w1-top_left[0]] = base
+
+        cv2.imshow(str(index), transformed_img)
+        cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    min_x = math.floor(min_x)
+    min_y = math.floor(min_y)
+    max_x = math.ceil(max_x)
+    max_y = math.ceil(max_y)
+    # print(min_x, max_x, min_y, max_y)
+    # new size
+    increase_x = math.fabs(min_x) + max_x - w1
+    increase_y = math.fabs(min_y) + max_y - h1
+    # print(increase_x, increase_y)
+
+    new_width = w1 + increase_x
+    new_height = h1 + increase_y
+    # new_image = np.zeros((new_height, new_width))
+
 def initFolder(video_file):
     video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name):
@@ -161,7 +211,7 @@ def main():
         marked_images = []
         estimated_pixels = []
         all_selected_pixels = []
-        skip_frame = 10
+        skip_frame = 20
         # for start_index in range(0, len(video_images), skip_frame):
         #     cv2.destroyAllWindows()
         #     if start_index > 0:
@@ -190,21 +240,24 @@ def main():
             result = cv2.warpPerspective(video_images[(index + 1) * skip_frame], matrix, (width, height))
             new_video_images.append(result)
 
-        inverse_homography_matrixes = []
+        skipped_images = [video_images[index] for index in range(skip_frame, len(video_images), skip_frame)]
+        stichImages(first_frame, skipped_images, homography_matrixes)
+
+        # inverse_homography_matrixes = []
         # calculate the homography inverse
-        for homography_matrix in homography_matrixes:
-            inverse_homography_matrix = la.inv(homography_matrix)
-            inverse_homography_matrixes.append(inverse_homography_matrix)
+        # for homography_matrix in homography_matrixes:
+        #     inverse_homography_matrix = la.inv(homography_matrix)
+        #     inverse_homography_matrixes.append(inverse_homography_matrix)
 
 
         # paralleling the homography mapping
-        num_cores = multiprocessing.cpu_count()
+        # num_cores = multiprocessing.cpu_count()
         # new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(homography_mapping)(video_images[(i+1) * skip_frame], first_frame, homography_matrixes[i]) for i in range(len(homography_matrixes)))
         # new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(inverse_homography_mapping)(video_images[(i+1) * skip_frame], first_frame, inverse_homography_matrixes[i]) for i in range(len(inverse_homography_matrixes)))
 
-        print 'Done with homography calculation. Writing to file now...'
-        video_path = os.path.join(video_file_name, video_file_name + '_homography_orig')
-        imagesToVideo.images_to_video(new_video_images, fps / skip_frame, video_path)
+        # print 'Done with homography calculation. Writing to file now...'
+        # video_path = os.path.join(video_file_name, video_file_name + '_homography_orig')
+        # imagesToVideo.images_to_video(new_video_images, fps / skip_frame, video_path)
 
         # video_path = os.path.join(video_file_name, video_file_name + '_traced')
         # imagesToVideo.images_to_video(marked_images, fps, video_path)
