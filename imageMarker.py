@@ -1,7 +1,7 @@
 import numpy as np
 
-def mark_image_at_point(img, y, x, size):
-    blue = np.uint8([255, 128, 0])
+blue = np.uint8([255, 128, 0])
+def mark_image_at_point(img, y, x, size, color = blue):
     if size < 1:
         size = 1
     negative_offset = (size - 1) / 2
@@ -12,15 +12,15 @@ def mark_image_at_point(img, y, x, size):
     min_x = max(0, x - negative_offset)
     max_x = min(img.shape[1], x + positive_offset)
     for y_offset in range(min_y, max_y):
-        img[y_offset][min_x] = blue
-        img[y_offset][min_x + 1] = blue
-        img[y_offset][max_x - 1] = blue
-        img[y_offset][max_x - 2] = blue
+        img[y_offset][min_x] = color
+        img[y_offset][min_x + 1] = color
+        img[y_offset][max_x - 1] = color
+        img[y_offset][max_x - 2] = color
 
     for x_offset in range(min_x, max_x):
-        img[min_y][x_offset] = blue
-        img[min_y + 1][x_offset] = blue
-        img[max_y - 1][x_offset] = blue
-        img[max_y - 2][x_offset] = blue
+        img[min_y][x_offset] = color
+        img[min_y + 1][x_offset] = color
+        img[max_y - 1][x_offset] = color
+        img[max_y - 2][x_offset] = color
 
     return img
