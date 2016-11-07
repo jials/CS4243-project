@@ -46,7 +46,6 @@ def mouse_click(event, x, y, flags, param):
 
 def handpick_image(img, estimated_pixels = []):
     global image, original_image, selected_pixels
-
     selected_pixels = estimated_pixels
     original_image = img
     image = img.copy()
