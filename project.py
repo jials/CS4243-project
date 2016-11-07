@@ -91,7 +91,9 @@ def getLastCoordinatesWithStatusArr(coordinates, status_arr):
             if status_arr[st_index][coord_index] == 1:
                 last_coordinates.append(coordinates[st_index][coord_index])
                 break
-    return np.array(last_coordinates)
+        if len(last_coordinates) - 1 < coord_index:
+            last_coordinates.append([50, 50])
+    return last_coordinates
 
 def inverse_homography_mapping(video_image, first_frame, inverse_homography_matrix):
     new_video_image = np.zeros_like(first_frame)
