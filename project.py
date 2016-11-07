@@ -1,5 +1,6 @@
 import getopt
 import numpy as np
+import numpy.linalg as la
 import os
 import sys
 import multiprocessing
@@ -92,6 +93,21 @@ def getLastCoordinatesWithStatusArr(coordinates, status_arr):
                 break
     return np.array(last_coordinates)
 
+def inverse_homography_mapping(video_image, first_frame, inverse_homography_matrix):
+    new_video_image = np.zeros_like(first_frame)
+    height, width, _ = first_frame.shape
+    for h in range(height):
+        for w in range(width):
+            # convert pixel to 3-D point by appending depth as 1
+            point = np.append([h, w], [1])
+            new_pos_x, new_pos_y, new_pos_z = np.dot(inverse_homography_matrix, point)
+            new_pos_x, new_pos_y = int(new_pos_x), int(new_pos_y)
+            try:
+                new_video_image[h][w] = video_image[new_pos_x][new_pos_y]
+            except IndexError:
+                continue
+    return new_video_image
+
 def initFolder(video_file):
     video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name):
@@ -154,25 +170,29 @@ def main():
             marked_images = marked_images + temp_marked_images
         cv2.destroyAllWindows()
 
-        # print(np.array(marked_frame_coordinates))
+        homography_matrixes = []
+        # skip the first frame
+        for mark_frame_coordinate in marked_frame_coordinates[1:450]:
+            # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
+            H, inliers = cv2.findHomography(np.float32(marked_frame_coordinates[0]), np.float32(mark_frame_coordinate), cv.CV_RANSAC)
+            homography_matrixes.append(H)
 
-        # homography_matrixes = []
-        # # skip the first frame
-        # for mark_frame_coordinate in marked_frame_coordinates[1:450]:
-        #     # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
-        #     H, inliers = cv2.findHomography(np.float32(marked_frame_coordinates[0]), np.float32(mark_frame_coordinate), cv.CV_RANSAC)
-        #     homography_matrixes.append(H)
-        #
-        # new_video_images = []
-        # new_video_images.append(first_frame)
-        #
-        # # paralleling the homography mapping
-        # num_cores = multiprocessing.cpu_count()
+        inverse_homography_matrixes = []
+        # calculate the homography inverse
+        for inverse_homography_matrix, homography_matrix in zip(inverse_homography_matrixes, homography_matrixes):
+            inverse_homography_matrix = la.inv(homography_matrix)
+
+        new_video_images = []
+        new_video_images.append(first_frame)
+
+        # paralleling the homography mapping
+        num_cores = multiprocessing.cpu_count()
         # new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(homography_mapping)(video_images[i+1], first_frame, homography_matrixes[i]) for i in range(400))
-        #
-        # print 'Done with homography calculation. Writing to file now...'
-        # video_path = os.path.join(video_file_name, video_file_name + '_homography')
-        # imagesToVideo.images_to_video(new_video_images, fps, video_path)
+        new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(inverse_homography_mapping)(video_images[i+1], first_frame, homography_matrixes[i]) for i in range(450))
+
+        print 'Done with homography calculation. Writing to file now...'
+        video_path = os.path.join(video_file_name, video_file_name + '_homography')
+        imagesToVideo.images_to_video(new_video_images, fps, video_path)
 
         video_path = os.path.join(video_file_name, video_file_name + '_traced')
         imagesToVideo.images_to_video(marked_images, fps, video_path)
