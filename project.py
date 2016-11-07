@@ -2,7 +2,6 @@ import getopt
 import numpy as np
 import os
 import sys
-import threading
 import multiprocessing
 from joblib import Parallel, delayed
 
@@ -13,8 +12,8 @@ import changeDetection
 import cornerDetection
 import edgeDetection
 import handpickPixel
-import homography
 import imagesToVideo
+import util
 
 
 def video_to_sobel_edge_detection(video_file):
@@ -131,15 +130,13 @@ def main():
         video_images, fps = get_all_frame_images_and_fps(video_file)
         first_frame = video_images[0]
         selected_pixels = handpickPixel.handpick_image(first_frame)
-        print selected_pixels
-        selected_pixels = [[192, 274], [167, 243], [130, 196], [342, 107], [435, 136]]
         height, width, _ = first_frame.shape
         marked_images, marked_frame_coordinates = changeDetection.mark_features_on_all_images(video_images, selected_pixels)
         print(np.array(marked_frame_coordinates))
 
         homography_matrixes = []
         # skip the first frame
-        for mark_frame_coordinate in marked_frame_coordinates[1:350]:
+        for mark_frame_coordinate in marked_frame_coordinates[1:450]:
             # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
             H, inliers = cv2.findHomography(np.float32(marked_frame_coordinates[0]), np.float32(mark_frame_coordinate), cv.CV_RANSAC)
             homography_matrixes.append(H)
@@ -149,7 +146,7 @@ def main():
 
         # paralleling the homography mapping
         num_cores = multiprocessing.cpu_count()
-        new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(homography_mapping)(video_images[i], first_frame, homography_matrixes[i + 1]) for i in range(300))
+        new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(homography_mapping)(video_images[i+1], first_frame, homography_matrixes[i]) for i in range(400))
 
         print 'Done with homography calculation. Writing to file now...'
         video_path = os.path.join(video_file_name, video_file_name + '_homography')
