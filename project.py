@@ -83,6 +83,15 @@ def homography_mapping(video_image, first_frame, homography_matrix):
                 continue
     return new_video_image
 
+def getLastCoordinatesWithStatusArr(coordinates, status_arr):
+    last_coordinates = []
+    for coord_index in range(len(coordinates[-1])):
+        for st_index in range(len(status_arr) - 1, -1, -1):
+            if status_arr[st_index][coord_index] == 1:
+                last_coordinates.append(coordinates[st_index][coord_index])
+                break
+    return np.array(last_coordinates)
+
 def initFolder(video_file):
     video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name):
@@ -129,28 +138,41 @@ def main():
     elif operation == 'handpick':
         video_images, fps = get_all_frame_images_and_fps(video_file)
         first_frame = video_images[0]
-        selected_pixels = handpickPixel.handpick_image(first_frame)
         height, width, _ = first_frame.shape
-        marked_images, marked_frame_coordinates = changeDetection.mark_features_on_all_images(video_images, selected_pixels)
-        print(np.array(marked_frame_coordinates))
 
-        homography_matrixes = []
-        # skip the first frame
-        for mark_frame_coordinate in marked_frame_coordinates[1:450]:
-            # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
-            H, inliers = cv2.findHomography(np.float32(marked_frame_coordinates[0]), np.float32(mark_frame_coordinate), cv.CV_RANSAC)
-            homography_matrixes.append(H)
+        marked_images = []
+        estimated_pixels = []
+        skip_frame = 20;
+        for start_index in range(0, len(video_images), skip_frame):
+            cv2.destroyAllWindows()
+            if start_index > 0:
+                cv2.imshow(str(start_index - skip_frame), marked_images[-skip_frame])
+            start_frame = video_images[start_index]
+            selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)
+            temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(video_images[start_index: start_index + skip_frame + 1], selected_pixels)
+            estimated_pixels = getLastCoordinatesWithStatusArr(marked_frame_coordinates, status_arr)
+            marked_images = marked_images + temp_marked_images
+        cv2.destroyAllWindows()
 
-        new_video_images = []
-        new_video_images.append(first_frame)
+        # print(np.array(marked_frame_coordinates))
 
-        # paralleling the homography mapping
-        num_cores = multiprocessing.cpu_count()
-        new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(homography_mapping)(video_images[i+1], first_frame, homography_matrixes[i]) for i in range(400))
-
-        print 'Done with homography calculation. Writing to file now...'
-        video_path = os.path.join(video_file_name, video_file_name + '_homography')
-        imagesToVideo.images_to_video(new_video_images, fps, video_path)
+        # homography_matrixes = []
+        # # skip the first frame
+        # for mark_frame_coordinate in marked_frame_coordinates[1:450]:
+        #     # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
+        #     H, inliers = cv2.findHomography(np.float32(marked_frame_coordinates[0]), np.float32(mark_frame_coordinate), cv.CV_RANSAC)
+        #     homography_matrixes.append(H)
+        #
+        # new_video_images = []
+        # new_video_images.append(first_frame)
+        #
+        # # paralleling the homography mapping
+        # num_cores = multiprocessing.cpu_count()
+        # new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(homography_mapping)(video_images[i+1], first_frame, homography_matrixes[i]) for i in range(400))
+        #
+        # print 'Done with homography calculation. Writing to file now...'
+        # video_path = os.path.join(video_file_name, video_file_name + '_homography')
+        # imagesToVideo.images_to_video(new_video_images, fps, video_path)
 
         video_path = os.path.join(video_file_name, video_file_name + '_traced')
         imagesToVideo.images_to_video(marked_images, fps, video_path)

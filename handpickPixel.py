@@ -18,8 +18,8 @@ def mark_all_points():
     marked_image = original_image.copy()
     for index in range(len(selected_pixels)):
         pixel = selected_pixels[index]
-        x = pixel[0]
-        y = pixel[1]
+        x = int(pixel[0])
+        y = int(pixel[1])
         marked_image = imageMarker.mark_image_at_point(marked_image, y, x, 9, colors[index])
     return marked_image
 
@@ -44,17 +44,18 @@ def mouse_click(event, x, y, flags, param):
             editing_index = -1
 
 
-
 def handpick_image(img, estimated_pixels = []):
     global image, original_image, selected_pixels
 
     selected_pixels = estimated_pixels
     original_image = img
     image = img.copy()
-    cv2.namedWindow('first frame')
-    cv2.setMouseCallback('first frame', mouse_click)
+    if len(estimated_pixels) > 0:
+        image = mark_all_points()
+    cv2.namedWindow('pick point')
+    cv2.setMouseCallback('pick point', mouse_click)
     while True:
-        cv2.imshow('first frame', image)
+        cv2.imshow('pick point', image)
         key = cv2.waitKey(1) & 0xFF
 
         if key == ord('r'):
@@ -64,6 +65,6 @@ def handpick_image(img, estimated_pixels = []):
         if key == ord('c'):
             break
 
-    cv2.destroyAllWindows()
+    # cv2.destroyAllWindows()
 
     return selected_pixels
