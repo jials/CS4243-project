@@ -153,6 +153,9 @@ def stitchImages(base, other_images, H_arr):
         prev_result = cv2.bitwise_and(result, result, mask=mask_inverse)
 
         result = cv2.add(np.uint8(prev_result), np.uint8(region_of_interest))
+        cv2.imshow(str(index), result)
+        cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
     return result
 
@@ -164,12 +167,13 @@ def initFolder(video_file):
 def usage():
     print "usage: " + sys.argv[0] + \
         " -o <operation>" + \
-        " -f <filename>"
+        " -f <filename>" + \
+        " [optional] -s <starting_frame_for_handpick>"
 
 def main():
     video_file = operation = None
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'o:f:')
+        opts, args = getopt.getopt(sys.argv[1:], 'o:f:s:')
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -179,8 +183,11 @@ def main():
             operation = a
         elif o == '-f':
             video_file = a
+        elif o == '-s':
+            starting_frame = int(a)
         else:
             assert False, "unhandled option"
+
 
     if video_file is None or operation is None:
         usage()
@@ -200,18 +207,28 @@ def main():
         imagesToVideo.images_to_video(images, fps, video_path)
 
     elif operation == 'handpick':
+        if len(opts) < 3:
+            starting_frame = 0
+
         video_images, fps = get_all_frame_images_and_fps(video_file)
         first_frame = video_images[0]
         height, width, _ = first_frame.shape
 
         marked_images = []
         estimated_pixels = []
-        all_selected_pixels = []
+        all_selected_pixels = util.load_coordinates(video_file_name)
         skip_frame = 20
-        for start_index in range(0, len(video_images), skip_frame):
+
+        # remove those unwanted selected_pixels
+        all_selected_pixels = all_selected_pixels[0: int(starting_frame / skip_frame) + 1] if starting_frame > 0 else []
+
+        jump_to_index = starting_frame - starting_frame % skip_frame
+        for start_index in range(jump_to_index, len(video_images), skip_frame):
             cv2.destroyAllWindows()
-            if start_index > 0:
+            if start_index > jump_to_index:
                 cv2.imshow(str(start_index - skip_frame), marked_images[-skip_frame])
+            elif start_index > 0 and start_index == jump_to_index:
+                estimated_pixels = all_selected_pixels[-1]
             start_frame = video_images[start_index]
             selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)
             all_selected_pixels.append(selected_pixels)
@@ -220,6 +237,7 @@ def main():
             marked_images = marked_images + temp_marked_images
         cv2.destroyAllWindows()
 
+
         util.save_coordinates(video_file_name, all_selected_pixels)
         # all_selected_pixels = util.load_coordinates(video_file_name)
 
@@ -227,6 +245,7 @@ def main():
         # skip the first frame
         for selected_pixel in all_selected_pixels[1:]:
             # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
+
             H, inliers = cv2.findHomography(np.float32(selected_pixel), np.float32(all_selected_pixels[0]), cv.CV_RANSAC)
             homography_matrixes.append(H)
 
@@ -241,24 +260,13 @@ def main():
         image_name = os.path.join(video_file_name, 'stitchedImage.jpg')
         cv2.imwrite(image_name, stitched_image)
 
-        # inverse_homography_matrixes = []
-        # calculate the homography inverse
-        # for homography_matrix in homography_matrixes:
-        #     inverse_homography_matrix = la.inv(homography_matrix)
-        #     inverse_homography_matrixes.append(inverse_homography_matrix)
-
-
-        # paralleling the homography mapping
-        # num_cores = multiprocessing.cpu_count()
-        # new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(homography_mapping)(video_images[(i+1) * skip_frame], first_frame, homography_matrixes[i]) for i in range(len(homography_matrixes)))
-        # new_video_images = Parallel(n_jobs=num_cores, verbose=11)(delayed(inverse_homography_mapping)(video_images[(i+1) * skip_frame], first_frame, inverse_homography_matrixes[i]) for i in range(len(inverse_homography_matrixes)))
-
         # print 'Done with homography calculation. Writing to file now...'
-        # video_path = os.path.join(video_file_name, video_file_name + '_homography_orig')
+        # video_path = os.path.join(video_file_name, video_file_name + '_homography')
         # imagesToVideo.images_to_video(new_video_images, fps / skip_frame, video_path)
 
-        # video_path = os.path.join(video_file_name, video_file_name + '_traced')
-        # imagesToVideo.images_to_video(marked_images, fps, video_path)
+        if len(marked_images) > 0:
+            video_path = os.path.join(video_file_name, video_file_name + '_traced')
+            imagesToVideo.images_to_video([marked_images[index] for index in range(0, len(marked_images), skip_frame)], fps/skip_frame, video_path)
 
     else:
         print 'Operation is not supported.'
