@@ -33,3 +33,12 @@ def mark_image_at_point(img, y, x, size, color = default_color):
         img[max_y - 2][x_offset] = color
 
     return img
+
+def mark_image_at_points(img, coordinates, size):
+    result = img.copy()
+    for index, coordinate in enumerate(coordinates):
+        result = mark_image_at_point(result, int(coordinate[1]), int(coordinate[0]), size, colors[index])
+    return result
+
+
+

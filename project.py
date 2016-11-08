@@ -16,6 +16,7 @@ import edgeDetection
 import handpickPixel
 import imagesToVideo
 import util
+import imageMarker
 
 
 def video_to_sobel_edge_detection(video_file):
@@ -287,7 +288,7 @@ def main():
 
         skipped_images = [video_images[index] for index in range(skip_frame, len(video_images), skip_frame)]
         stitched_image = stitchImages(first_frame, skipped_images, homography_matrixes)
-        image_name = os.path.join(video_file_name, 'stitchedImage.jpg')
+        image_name = os.path.join(video_file_name, video_file_name + '.jpg')
         cv2.imwrite(image_name, stitched_image)
 
         # print 'Done with homography calculation. Writing to file now...'
@@ -297,6 +298,59 @@ def main():
         if len(marked_images) > 0:
             video_path = os.path.join(video_file_name, video_file_name + '_traced')
             imagesToVideo.images_to_video([marked_images[index] for index in range(0, len(marked_images), skip_frame)], fps/skip_frame, video_path)
+
+    elif operation == 'topdown':
+        court_image = cv2.imread('court.png')
+        """
+        work based on the assumption that points are picked by the following order:
+        - top left, bottom left, top right, bottom right
+        """
+        selected_court_pixels = handpickPixel.handpick_image(court_image)
+        selected_court_pixels = [[63, 86], [60, 248], [388, 84], [386, 246]]
+
+        stitched_video_path = os.path.join(video_file_name, video_file_name + '.avi')
+        video_images, fps = get_all_frame_images_and_fps(stitched_video_path)
+
+        height, width, _ = court_image.shape
+
+        # select court corners from the panorama video
+        selected_court_corners = handpickPixel.handpick_image(video_images[0])
+
+        H, inliers = cv2.findHomography(np.float32(selected_court_corners), np.float32(selected_court_pixels), cv.CV_RANSAC)
+
+        estimated_pixels = []
+        all_selected_players_feet = []
+        for index in range(0, len(video_images)):
+            cv2.destroyAllWindows()
+            if index > 0:
+                cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
+            selected_players_feet = handpickPixel.handpick_image(video_images[index], estimated_pixels)
+            if not index == len(video_images) - 1:
+                temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
+                    video_images[index: index + 2], selected_players_feet)
+                estimated_pixels = marked_frame_coordinates[-1]
+            all_selected_players_feet.append(selected_players_feet)
+        cv2.destroyAllWindows()
+
+        util.save_players_feet(video_file, all_selected_players_feet)
+        # util.load_players_feet(video_file)
+
+        # colors for each players in the following order: Red, Orange, Green, Blue
+        colors = [(255, 255, 255), (0, 128, 255), (0, 204, 0), (204, 0, 0)]
+
+        # calculate the new position of the player with respect to top-down view
+        for selected_players_feet in all_selected_players_feet:
+            for idx, player_feet in enumerate(selected_players_feet):
+                point = np.append(player_feet, [1])
+                x, y, z = point * H
+                # TODO: verify if cv2.circle needs to be reassigned. Doesn't seems like it from the documentation
+                cv2.circle(court_image, (x, y), 63, colors[idx])
+
+        # TODO: write to file to generate the top-down view video
+
+        # TODO: this was used to generate the top-down view images. Don't remove yet
+        # warp = cv2.warpPerspective(stitched_image, H, (width, height))
+        # cv2.imwrite('warp.jpg', warp)
 
     else:
         print 'Operation is not supported.'

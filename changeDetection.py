@@ -31,6 +31,8 @@ def mark_features_on_all_images(images, features_coordinates):
         status_arr.append(st)
 
         if p1 is None:
+            marked_images.append(frame)
+            marked_frame_coordinates.append(features_coordinates if len(images) == 1 else marked_frame_coordinates[-1])
             continue
 
         new_points = []
