@@ -216,7 +216,7 @@ def main():
 
         marked_images = []
         estimated_pixels = []
-        all_selected_pixels = util.load_coordinates(video_file_name)
+        all_selected_pixels = util.load_coordinates(video_file_name) if starting_frame > 0 else []
         skip_frame = 20
 
         # remove those unwanted selected_pixels
