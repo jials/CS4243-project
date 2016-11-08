@@ -220,26 +220,26 @@ def main():
         skip_frame = 20
 
         # remove those unwanted selected_pixels
-        all_selected_pixels = all_selected_pixels[0: int(starting_frame / skip_frame) + 1] if starting_frame > 0 else []
+        if starting_frame == -1:
+            all_selected_pixels = util.load_coordinates(video_file_name)
+        else:
+            all_selected_pixels = all_selected_pixels[0: int(starting_frame / skip_frame) + 1] if starting_frame > 0 else []
 
-        jump_to_index = starting_frame - starting_frame % skip_frame
-        for start_index in range(jump_to_index, len(video_images), skip_frame):
+            jump_to_index = starting_frame - starting_frame % skip_frame
+            for start_index in range(jump_to_index, len(video_images), skip_frame):
+                cv2.destroyAllWindows()
+                if start_index > jump_to_index:
+                    cv2.imshow(str(start_index - skip_frame), marked_images[-skip_frame])
+                elif start_index > 0 and start_index == jump_to_index:
+                    estimated_pixels = all_selected_pixels[-1]
+                start_frame = video_images[start_index]
+                selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)
+                all_selected_pixels.append(selected_pixels)
+                temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(video_images[start_index: min(len(video_images), start_index + skip_frame + 1)], selected_pixels)
+                estimated_pixels = getLastCoordinatesWithStatusArr(marked_frame_coordinates, status_arr)
+                marked_images = marked_images + temp_marked_images
             cv2.destroyAllWindows()
-            if start_index > jump_to_index:
-                cv2.imshow(str(start_index - skip_frame), marked_images[-skip_frame])
-            elif start_index > 0 and start_index == jump_to_index:
-                estimated_pixels = all_selected_pixels[-1]
-            start_frame = video_images[start_index]
-            selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)
-            all_selected_pixels.append(selected_pixels)
-            temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(video_images[start_index: min(len(video_images), start_index + skip_frame + 1)], selected_pixels)
-            estimated_pixels = getLastCoordinatesWithStatusArr(marked_frame_coordinates, status_arr)
-            marked_images = marked_images + temp_marked_images
-        cv2.destroyAllWindows()
-
-
-        util.save_coordinates(video_file_name, all_selected_pixels)
-        # all_selected_pixels = util.load_coordinates(video_file_name)
+            util.save_coordinates(video_file_name, all_selected_pixels)
 
         homography_matrixes = []
         # skip the first frame
