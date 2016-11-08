@@ -4,7 +4,7 @@ import imageMarker
 
 lucas_kanade_params = dict(
     winSize= (4, 4),
-    maxLevel= 0, #level of pyramids used
+    maxLevel= 3, #level of pyramids used
     criteria= (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03)
 )
 

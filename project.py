@@ -131,6 +131,11 @@ def stitchImages(base, other_images, H_arr):
         temp_min_y = np.amin([corner[0][1] for corner in combined_corners])
         temp_max_x = np.amax([corner[0][0] for corner in combined_corners])
         temp_max_y = np.amax([corner[0][1] for corner in combined_corners])
+        # print(index)
+        # print(temp_min_x)
+        # print(temp_min_y)
+        # print(temp_max_x)
+        # print(temp_max_y)
         min_x = temp_min_x if temp_min_x < min_x else min_x
         min_y = temp_min_y if temp_min_y < min_y else min_y
         max_x = temp_max_x if temp_max_x > max_x else max_x
@@ -140,8 +145,10 @@ def stitchImages(base, other_images, H_arr):
     transformed_image_height = int(max_y - min_y)
     transformed_shape = (transformed_image_width, transformed_image_height)
     top_left = [min_x, min_y]
+    # print(transformed_shape)
 
     result = np.zeros([transformed_shape[1], transformed_shape[0], 3])
+    stitch_results = []
     for index, image in enumerate(other_images):
         translation_matrix = np.array([[1,0,-top_left[0]],[0,1,-top_left[1]],[0,0,1]])
         transformed_img = cv2.warpPerspective(image, np.dot(translation_matrix, H_arr[index]), transformed_shape)
@@ -153,9 +160,23 @@ def stitchImages(base, other_images, H_arr):
         prev_result = cv2.bitwise_and(result, result, mask=mask_inverse)
 
         result = cv2.add(np.uint8(prev_result), np.uint8(region_of_interest))
-        cv2.imshow(str(index), result)
-        cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        stitch_results.append(result)
+
+    panaroma_image = result.copy()
+    for index, stitched_image in enumerate(stitch_results):
+        gray_stitched_image = cv2.cvtColor(stitched_image, cv2.COLOR_BGR2GRAY) # image to add in existing result
+        _, mask = cv2.threshold(gray_stitched_image, 30, 255, cv2.THRESH_BINARY)
+        mask_inverse = cv2.bitwise_not(mask)
+        region_of_interest = cv2.bitwise_and(stitched_image, stitched_image, mask=mask)
+        prev_result = cv2.bitwise_and(panaroma_image, panaroma_image, mask=mask_inverse)
+
+        result = cv2.add(np.uint8(prev_result), np.uint8(region_of_interest))
+        stitch_results[index] = result
+    #     cv2.imshow(str(index), result)
+    #     cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    imagesToVideo.images_to_video(stitch_results, 3, 'stitchVideos')
 
     return result
 
@@ -215,7 +236,6 @@ def main():
         height, width, _ = first_frame.shape
 
         marked_images = []
-        estimated_pixels = []
         all_selected_pixels = util.load_coordinates(video_file_name) if starting_frame > 0 else []
         skip_frame = 20
 
@@ -223,15 +243,22 @@ def main():
         if starting_frame == -1:
             all_selected_pixels = util.load_coordinates(video_file_name)
         else:
-            all_selected_pixels = all_selected_pixels[0: int(starting_frame / skip_frame) + 1] if starting_frame > 0 else []
+            estimated_pixels = all_selected_pixels[int(starting_frame / skip_frame)] if starting_frame > 0 else []
+            all_selected_pixels = all_selected_pixels[0: int(starting_frame / skip_frame)] if starting_frame > 0 else []
 
             jump_to_index = starting_frame - starting_frame % skip_frame
+
+            #generate missing marked images
+            for start_index in range(0, jump_to_index, skip_frame):
+                selected_pixels = all_selected_pixels[start_index/skip_frame]
+                temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(video_images[start_index: min(len(video_images), start_index + skip_frame + 1)], selected_pixels)
+                marked_images = marked_images + temp_marked_images
+
             for start_index in range(jump_to_index, len(video_images), skip_frame):
                 cv2.destroyAllWindows()
                 if start_index > jump_to_index:
                     cv2.imshow(str(start_index - skip_frame), marked_images[-skip_frame])
-                elif start_index > 0 and start_index == jump_to_index:
-                    estimated_pixels = all_selected_pixels[-1]
+
                 start_frame = video_images[start_index]
                 selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)
                 all_selected_pixels.append(selected_pixels)
@@ -245,6 +272,9 @@ def main():
         # skip the first frame
         for selected_pixel in all_selected_pixels[1:]:
             # H = homography.find_homography(marked_frame_coordinates[0], mark_frame_coordinate)
+            if len(selected_pixel) > len(all_selected_pixels[0]):
+                print('warning: selected_pixel size is different with the all_selected_pixels[0] size')
+                selected_pixel = selected_pixel[0: len(all_selected_pixels[0])]
 
             H, inliers = cv2.findHomography(np.float32(selected_pixel), np.float32(all_selected_pixels[0]), cv.CV_RANSAC)
             homography_matrixes.append(H)
@@ -261,8 +291,8 @@ def main():
         cv2.imwrite(image_name, stitched_image)
 
         # print 'Done with homography calculation. Writing to file now...'
-        # video_path = os.path.join(video_file_name, video_file_name + '_homography')
-        # imagesToVideo.images_to_video(new_video_images, fps / skip_frame, video_path)
+        video_path = os.path.join(video_file_name, video_file_name + '_homography')
+        imagesToVideo.images_to_video(new_video_images, fps / skip_frame, video_path)
 
         if len(marked_images) > 0:
             video_path = os.path.join(video_file_name, video_file_name + '_traced')
