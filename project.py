@@ -177,9 +177,7 @@ def stitchImages(base, other_images, H_arr):
     #     cv2.waitKey(0)
     # cv2.destroyAllWindows()
 
-    imagesToVideo.images_to_video(stitch_results, 3, 'stitchVideos')
-
-    return result
+    return panaroma_image, stitch_results
 
 def initFolder(video_file):
     video_file_name, _ = video_file.split('.')
@@ -287,9 +285,12 @@ def main():
             new_video_images.append(result)
 
         skipped_images = [video_images[index] for index in range(skip_frame, len(video_images), skip_frame)]
-        stitched_image = stitchImages(first_frame, skipped_images, homography_matrixes)
+        panaroma_image, stitch_results = stitchImages(first_frame, skipped_images, homography_matrixes)
+        video_path = os.path.join(video_file_name, video_file_name)
+        imagesToVideo.images_to_video(stitch_results, 3, video_path)
+
         image_name = os.path.join(video_file_name, video_file_name + '.jpg')
-        cv2.imwrite(image_name, stitched_image)
+        cv2.imwrite(image_name, panaroma_image)
 
         # print 'Done with homography calculation. Writing to file now...'
         video_path = os.path.join(video_file_name, video_file_name + '_homography')
@@ -305,7 +306,7 @@ def main():
         work based on the assumption that points are picked by the following order:
         - top left, bottom left, top right, bottom right
         """
-        selected_court_pixels = handpickPixel.handpick_image(court_image)
+        # selected_court_pixels = handpickPixel.handpick_image(court_image)
         selected_court_pixels = [[63, 86], [60, 248], [388, 84], [386, 246]]
 
         stitched_video_path = os.path.join(video_file_name, video_file_name + '.avi')
@@ -320,33 +321,60 @@ def main():
 
         estimated_pixels = []
         all_selected_players_feet = []
-        for index in range(0, len(video_images)):
-            cv2.destroyAllWindows()
-            if index > 0:
-                cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
-            selected_players_feet = handpickPixel.handpick_image(video_images[index], estimated_pixels)
-            if not index == len(video_images) - 1:
-                temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
-                    video_images[index: index + 2], selected_players_feet)
-                estimated_pixels = marked_frame_coordinates[-1]
-            all_selected_players_feet.append(selected_players_feet)
-        cv2.destroyAllWindows()
+        # for index in range(0, len(video_images)):
+        #     cv2.destroyAllWindows()
+        #     if index > 0:
+        #         cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
+        #     selected_players_feet = handpickPixel.handpick_image(video_images[index], estimated_pixels)
+        #     if not index == len(video_images) - 1:
+        #         temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
+        #             video_images[index: index + 2], selected_players_feet)
+        #         estimated_pixels = marked_frame_coordinates[-1]
+        #     all_selected_players_feet.append(selected_players_feet)
+        # cv2.destroyAllWindows()
 
-        util.save_players_feet(video_file, all_selected_players_feet)
-        # util.load_players_feet(video_file)
+        # util.save_players_feet(video_file_name, all_selected_players_feet)
+        all_selected_players_feet = util.load_players_feet(video_file_name)
 
-        # colors for each players in the following order: Red, Orange, Green, Blue
-        colors = [(255, 255, 255), (0, 128, 255), (0, 204, 0), (204, 0, 0)]
+        # colors for each players in the following order: Red, Yellow, Green, Blue
+        colors = [(0, 0, 204), (0, 255, 255), (0, 204, 0), (204, 0, 0)]
 
+        # add more frames to smoothen the videos
+        frames_to_add = 19
+        projected_all_selected_players_feet = [all_selected_players_feet[0]]
+        for idx in range(len(all_selected_players_feet) - 1):
+            cur_players_feet = all_selected_players_feet[idx]
+            next_players_feet = all_selected_players_feet[idx + 1]
+
+            for fr in range(frames_to_add):
+                ratio = float(fr) / frames_to_add
+                new_players_feet = []
+                for cur_player_feet, next_player_feet in zip(cur_players_feet, next_players_feet):
+                    new_player_feet = ratio * np.array(cur_player_feet) + (1 - ratio) * np.array(next_player_feet)
+                    new_players_feet.append(new_player_feet)
+                projected_all_selected_players_feet.append(new_players_feet)
+
+            projected_all_selected_players_feet.append(next_players_feet)
+
+        all_selected_players_feet = projected_all_selected_players_feet
         # calculate the new position of the player with respect to top-down view
+        court_images = []
         for selected_players_feet in all_selected_players_feet:
+            new_court_image = court_image.copy()
             for idx, player_feet in enumerate(selected_players_feet):
-                point = np.append(player_feet, [1])
-                x, y, z = point * H
-                # TODO: verify if cv2.circle needs to be reassigned. Doesn't seems like it from the documentation
-                cv2.circle(court_image, (x, y), 63, colors[idx])
-
-        # TODO: write to file to generate the top-down view video
+                if idx >= 4:
+                    break
+                point = np.transpose(np.matrix(np.append(player_feet, [1])))
+                x, y, z = H * point
+                x = x/z
+                y = y/z
+                cv2.circle(new_court_image, (x, y), 5, colors[idx], 6)
+            court_images.append(new_court_image)
+        #     cv2.imshow('court image', new_court_image)
+        #     cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        video_path = os.path.join(video_file_name, video_file_name + '_court')
+        imagesToVideo.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
 
         # TODO: this was used to generate the top-down view images. Don't remove yet
         # warp = cv2.warpPerspective(stitched_image, H, (width, height))
