@@ -2,13 +2,6 @@ import cv2
 import numpy as np
 import imageMarker
 
-red = np.uint8([0, 0, 255])
-orange = np.uint8([0, 127, 255])
-yellow = np.uint8([0, 255, 255])
-green = np.uint8([0, 255, 0])
-blue = np.uint8([255, 0, 0])
-colors = [red, orange, yellow, green, blue]
-
 selected_pixels = []
 original_image = []
 image = []
@@ -20,7 +13,7 @@ def mark_all_points():
         pixel = selected_pixels[index]
         x = int(pixel[0])
         y = int(pixel[1])
-        marked_image = imageMarker.mark_image_at_point(marked_image, y, x, 9, colors[index])
+        marked_image = imageMarker.mark_image_at_point(marked_image, y, x, 9, imageMarker.colors[index])
     return marked_image
 
 def mouse_click(event, x, y, flags, param):
@@ -34,7 +27,7 @@ def mouse_click(event, x, y, flags, param):
                 editing_index = index
                 return
 
-        if len(selected_pixels) < len(colors):
+        if len(selected_pixels) < len(imageMarker.colors):
             selected_pixels.append([x, y])
             image = mark_all_points()
     elif event == 4: #mouse up

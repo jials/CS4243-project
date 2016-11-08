@@ -8,13 +8,6 @@ lucas_kanade_params = dict(
     criteria= (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03)
 )
 
-red = np.uint8([0, 0, 255])
-orange = np.uint8([0, 127, 255])
-yellow = np.uint8([0, 255, 255])
-green = np.uint8([0, 255, 0])
-blue = np.uint8([255, 0, 0])
-colors = [red, orange, yellow, green, blue]
-
 def mark_features_on_all_images(images, features_coordinates):
     marked_images = []
     marked_frame_coordinates = []
@@ -51,7 +44,7 @@ def mark_features_on_all_images(images, features_coordinates):
         for index, point in enumerate(new_points):
             x, y = point.ravel()
             marked_coordinates.append([x,y])
-            imageMarker.mark_image_at_point(frame, int(y), int(x), 9, colors[index])
+            imageMarker.mark_image_at_point(frame, int(y), int(x), 9, imageMarker.colors[index])
         marked_frame_coordinates.append(marked_coordinates)
 
         img = cv2.add(frame,mask)

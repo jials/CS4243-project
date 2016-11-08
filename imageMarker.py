@@ -1,7 +1,16 @@
 import numpy as np
 
-blue = np.uint8([255, 128, 0])
-def mark_image_at_point(img, y, x, size, color = blue):
+red = np.uint8([0, 0, 255])
+orange = np.uint8([0, 127, 255])
+yellow = np.uint8([0, 255, 255])
+green = np.uint8([0, 255, 0])
+blue = np.uint8([255, 0, 0])
+indigo = np.uint8([130, 0, 75])
+violet = np.uint8([255, 0, 139])
+colors = [red, orange, yellow, green, blue, indigo, violet]
+
+default_color = np.uint8([255, 128, 0])
+def mark_image_at_point(img, y, x, size, color = default_color):
     if size < 1:
         size = 1
     negative_offset = (size - 1) / 2
