@@ -261,7 +261,7 @@ def main():
             for start_index in range(jump_to_index, len(video_images), skip_frame):
                 cv2.destroyAllWindows()
                 if start_index > jump_to_index:
-                    cv2.imshow(str(start_index - skip_frame), marked_images[-skip_frame])
+                    cv2.imshow(str(start_index - skip_frame), imageMarker.mark_image_at_points(video_images[start_index - skip_frame], all_selected_pixels[-1], 9))
 
                 start_frame = video_images[start_index]
                 selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)
