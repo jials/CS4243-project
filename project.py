@@ -331,24 +331,23 @@ def main():
         all_selected_players_feet = []
         all_is_jumping = []
 
-        for index in range(0, len(video_images)):
-            cv2.destroyAllWindows()
-            if index > 0:
-                cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
-            selected_players_feet, is_jumping = handpickPixel.handpick_image(video_images[index], estimated_pixels)
-            if not index == len(video_images) - 1:
-                temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
-                    video_images[index: index + 2], selected_players_feet)
-                estimated_pixels = marked_frame_coordinates[-1]
-            all_selected_players_feet.append(selected_players_feet)
-            all_is_jumping.append(is_jumping)
-        cv2.destroyAllWindows()
-
-        util.save_players_feet(video_file_name, all_selected_players_feet)
-        util.save_is_jumping(video_file_name, all_is_jumping)
-        # all_selected_players_feet = util.load_players_feet(video_file_name)
-        # all_is_jumping = util.load_players_feet(video_file_name)
-
+        # for index in range(0, len(video_images)):
+        #     cv2.destroyAllWindows()
+        #     if index > 0:
+        #         cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
+        #     selected_players_feet, is_jumping = handpickPixel.handpick_image(video_images[index], estimated_pixels)
+        #     if not index == len(video_images) - 1:
+        #         temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
+        #             video_images[index: index + 2], selected_players_feet)
+        #         estimated_pixels = marked_frame_coordinates[-1]
+        #     all_selected_players_feet.append(selected_players_feet)
+        #     all_is_jumping.append(is_jumping)
+        # cv2.destroyAllWindows()
+        #
+        # util.save_players_feet(video_file_name, all_selected_players_feet)
+        # util.save_is_jumping(video_file_name, all_is_jumping)
+        all_selected_players_feet = util.load_players_feet(video_file_name)
+        all_is_jumping = util.load_is_jumping(video_file_name)
 
         # colors for each players in the following order: Red, Yellow, Green, Blue
         colors = [(0, 0, 204), (0, 255, 255), (0, 204, 0), (204, 0, 0)]
@@ -366,17 +365,15 @@ def main():
             for fr in range(frames_to_add):
                 ratio = float(fr) / frames_to_add
                 new_players_feet = []
-                new_is_jumping = []
                 for cur_player_feet, next_player_feet in zip(cur_players_feet, next_players_feet):
                     new_player_feet = ratio * np.array(cur_player_feet) + (1 - ratio) * np.array(next_player_feet)
                     new_players_feet.append(new_player_feet)
-                    if ratio <= 0.5:
-                        new_is_jumping.append(cur_is_jumping)
-                    else:
-                        new_is_jumping.append(next_is_jumping)
+                if ratio <= 0.5:
+                    projected_all_is_jumping.append(cur_is_jumping)
+                else:
+                    projected_all_is_jumping.append(next_is_jumping)
 
                 projected_all_selected_players_feet.append(new_players_feet)
-                projected_all_is_jumping.append(new_is_jumping)
 
             projected_all_selected_players_feet.append(next_players_feet)
             projected_all_is_jumping.append(next_is_jumping)
@@ -396,11 +393,11 @@ def main():
                 y = y/z
                 cv2.circle(new_court_image, (x, y), 5, colors[idx], 6)
                 if is_jumping[idx]:
-                    cv2.circle(new_court_image, (x, y), 5, np.uint8(0, 0, 0), 3)
+                    cv2.circle(new_court_image, (x, y), 5, (0, 0, 0), 3)
             court_images.append(new_court_image)
-        #     cv2.imshow('court image', new_court_image)
-        #     cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+            cv2.imshow('court image', new_court_image)
+            cv2.waitKey(0)
+        cv2.destroyAllWindows()
         video_path = os.path.join(video_file_name, video_file_name + '_court')
         imagesToVideo.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
 
