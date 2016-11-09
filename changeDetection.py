@@ -23,6 +23,9 @@ def mark_features_on_all_images(images, features_coordinates):
     status_arr = []
     for fr in range(1, len(images)):
         marked_coordinates = []
+        if images[fr] is None:
+            print('change detection problematic frame', fr)
+            print('len of given images', len(images))
         frame = images[fr].copy()
         gs_img = cv2.cvtColor(images[fr], cv2.COLOR_BGR2GRAY)
 

@@ -147,6 +147,9 @@ def stitchImages(base, other_images, H_arr):
     transformed_shape = (transformed_image_width, transformed_image_height)
     top_left = [min_x, min_y]
     # print(transformed_shape)
+    if transformed_shape[0] > 5000 or transformed_shape[1] > 5000:
+        print('image too big and skipped')
+        return [], []
 
     result = np.zeros([transformed_shape[1], transformed_shape[0], 3])
     stitch_results = []
@@ -286,11 +289,14 @@ def main():
 
         skipped_images = [video_images[index] for index in range(skip_frame, len(video_images), skip_frame)]
         panaroma_image, stitch_results = stitchImages(first_frame, skipped_images, homography_matrixes)
-        video_path = os.path.join(video_file_name, video_file_name)
-        imagesToVideo.images_to_video(stitch_results, 3, video_path)
 
-        image_name = os.path.join(video_file_name, video_file_name + '.jpg')
-        cv2.imwrite(image_name, panaroma_image)
+        if len(stitch_results) > 0:
+            video_path = os.path.join(video_file_name, video_file_name)
+            imagesToVideo.images_to_video(stitch_results, 3, video_path)
+
+        if len(panaroma_image) > 0:
+            image_name = os.path.join(video_file_name, video_file_name + '.jpg')
+            cv2.imwrite(image_name, panaroma_image)
 
         # print 'Done with homography calculation. Writing to file now...'
         video_path = os.path.join(video_file_name, video_file_name + '_homography')
