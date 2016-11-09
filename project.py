@@ -146,7 +146,7 @@ def stitchImages(base, other_images, H_arr):
     transformed_image_height = int(max_y - min_y)
     transformed_shape = (transformed_image_width, transformed_image_height)
     top_left = [min_x, min_y]
-    # print(transformed_shape)
+    print('panaroma image size', transformed_shape)
     if transformed_shape[0] > 5000 or transformed_shape[1] > 5000:
         print('image too big and skipped')
         return [], []
