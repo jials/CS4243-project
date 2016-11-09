@@ -6,6 +6,7 @@ import os
 import sys
 import multiprocessing
 from joblib import Parallel, delayed
+import math
 
 import cv2
 import cv2.cv as cv
@@ -182,6 +183,15 @@ def stitchImages(base, other_images, H_arr):
 
     return panaroma_image, stitch_results
 
+def calculate_distance(pointA, pointB):
+    # length of an actual beach volleyball court (in meters)
+    standard_court_length = 16
+    length_pixel = 324
+
+    A_x, A_y = pointA[0], pointA[1]
+    B_x, B_y = pointB[0], pointB[1]
+    return math.sqrt((B_x - A_x) * (B_x - A_x) + (B_y - A_y) * (B_y - A_y)) / length_pixel * standard_court_length
+
 def initFolder(video_file):
     video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name):
@@ -314,7 +324,7 @@ def main():
         work based on the assumption that points are picked by the following order:
         - top left, bottom left, top right, bottom right
         """
-        # selected_court_pixels = handpickPixel.handpick_image(court_image)
+        # selected_court_pixels, _ = handpickPixel.handpick_image(court_image)
         selected_court_pixels = [[63, 86], [60, 248], [388, 84], [386, 246]]
 
         stitched_video_path = os.path.join(video_file_name, video_file_name + '.avi')
@@ -401,9 +411,16 @@ def main():
         video_path = os.path.join(video_file_name, video_file_name + '_court')
         imagesToVideo.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
 
-        # TODO: this was used to generate the top-down view images. Don't remove yet
-        # warp = cv2.warpPerspective(stitched_image, H, (width, height))
-        # cv2.imwrite('warp.jpg', warp)
+        # calculate the distance travelled by 4 different players
+        distance_travelled = [[0] for _ in range(4)]
+        for idx, selected_players_feet in enumerate(all_selected_players_feet[:-1]):
+            for i in range(len(selected_players_feet)):
+                next_frame_player_position = all_selected_players_feet[idx+1][i]
+                distance = distance_travelled[i][-1] + calculate_distance(selected_players_feet[i], next_frame_player_position)
+                distance_travelled[i].append(distance)
+
+            for i in range(len(selected_players_feet), 4):
+                distance_travelled[i].append(0)
 
     elif operation == "cut":
         if len(opts) < 3:
