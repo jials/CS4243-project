@@ -20,7 +20,7 @@ def mark_all_points():
     return marked_image
 
 def mouse_click(event, x, y, flags, param):
-    global image, selected_pixels, editing_index
+    global image, selected_pixels, editing_index, is_jumping, is_j_mode
     if event == 1: #mouse click
         for index in range(len(selected_pixels)):
             pixel = selected_pixels[index]
@@ -40,15 +40,17 @@ def mouse_click(event, x, y, flags, param):
             # mark that the player is jumping at this frame
             if is_j_mode:
                 is_jumping[editing_index] = True
+                is_j_mode = False
             editing_index = -1
 
 
 def handpick_image(img, estimated_pixels = []):
-    global image, original_image, selected_pixels, is_jumping
+    global image, original_image, selected_pixels, is_jumping, is_j_mode
     selected_pixels = estimated_pixels
     original_image = img
     is_jumping = [False for i in range(4)]
     image = img.copy()
+    is_j_mode = False
 
     if len(estimated_pixels) > 0:
         image = mark_all_points()
