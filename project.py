@@ -346,7 +346,10 @@ def main():
         cv2.destroyAllWindows()
 
         util.save_players_feet(video_file_name, all_selected_players_feet)
+        util.save_is_jumping(video_file_name, all_is_jumping)
         # all_selected_players_feet = util.load_players_feet(video_file_name)
+        # all_is_jumping = util.load_players_feet(video_file_name)
+
 
         # colors for each players in the following order: Red, Yellow, Green, Blue
         colors = [(0, 0, 204), (0, 255, 255), (0, 204, 0), (204, 0, 0)]
