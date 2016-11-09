@@ -336,7 +336,6 @@ def main():
             if index > 0:
                 cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
             selected_players_feet, is_jumping = handpickPixel.handpick_image(video_images[index], estimated_pixels)
-            print(is_jumping)
             if not index == len(video_images) - 1:
                 temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
                     video_images[index: index + 2], selected_players_feet)
@@ -354,24 +353,36 @@ def main():
         # add more frames to smoothen the videos
         frames_to_add = 19
         projected_all_selected_players_feet = [all_selected_players_feet[0]]
+        projected_all_is_jumping = [all_is_jumping[0]]
         for idx in range(len(all_selected_players_feet) - 1):
             cur_players_feet = all_selected_players_feet[idx]
             next_players_feet = all_selected_players_feet[idx + 1]
+            cur_is_jumping = all_is_jumping[idx]
+            next_is_jumping = all_is_jumping[idx]
 
             for fr in range(frames_to_add):
                 ratio = float(fr) / frames_to_add
                 new_players_feet = []
+                new_is_jumping = []
                 for cur_player_feet, next_player_feet in zip(cur_players_feet, next_players_feet):
                     new_player_feet = ratio * np.array(cur_player_feet) + (1 - ratio) * np.array(next_player_feet)
                     new_players_feet.append(new_player_feet)
+                    if ratio <= 0.5:
+                        new_is_jumping.append(cur_is_jumping)
+                    else:
+                        new_is_jumping.append(next_is_jumping)
+
                 projected_all_selected_players_feet.append(new_players_feet)
+                projected_all_is_jumping.append(new_is_jumping)
 
             projected_all_selected_players_feet.append(next_players_feet)
+            projected_all_is_jumping.append(next_is_jumping)
 
         all_selected_players_feet = projected_all_selected_players_feet
+        all_is_jumping = projected_all_is_jumping
         # calculate the new position of the player with respect to top-down view
         court_images = []
-        for selected_players_feet in all_selected_players_feet:
+        for selected_players_feet, is_jumping in zip(all_selected_players_feet, all_is_jumping):
             new_court_image = court_image.copy()
             for idx, player_feet in enumerate(selected_players_feet):
                 if idx >= 4:
@@ -381,6 +392,8 @@ def main():
                 x = x/z
                 y = y/z
                 cv2.circle(new_court_image, (x, y), 5, colors[idx], 6)
+                if is_jumping[idx]:
+                    cv2.circle(new_court_image, (x, y), 5, np.uint8(0, 0, 0), 3)
             court_images.append(new_court_image)
         #     cv2.imshow('court image', new_court_image)
         #     cv2.waitKey(0)
