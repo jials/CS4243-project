@@ -352,9 +352,10 @@ def main():
 
             all_selected_players_feet.append(selected_players_feet)
             all_is_jumping.append(is_jumping)
-            if player_index_with_ball == -1 and len(selected_players_feet) == 5:
+            if player_index_with_ball == 4 and len(selected_players_feet) == 5:
                 #the fifth point is the ball (use when the ball hits the ground)
                 ball_positions.append(selected_players_feet[-1])
+                selected_players_feet = selected_players_feet[:4]
             else:
                 ball_positions.append(selected_players_feet[player_index_with_ball] if player_index_with_ball != -1 else [-1, -1])
 
@@ -378,10 +379,18 @@ def main():
         colors = [(0, 0, 204), (0, 255, 255), (0, 204, 0), (204, 0, 0)]
 
         has_ball_positions = [False if ball_position[0] == -1 and ball_position[1] == -1 else True for ball_position in ball_positions]
-        ball_positions = cv2.perspectiveTransform(np.array(ball_positions), H)
+        # print('has ball positions', has_ball_positions)
+        ball_positions = cv2.perspectiveTransform(np.float32(ball_positions).reshape(-1, 1, 2), H).reshape(-1, 2)
+        # print('ball positions after H', ball_positions)
+
 
         #fill up frame without ball position
         indexes_with_ball_positions = np.where(np.array(has_ball_positions) == True)[0]
+        # print('indexes with ball positions', indexes_with_ball_positions)
+        for idx in range(0, indexes_with_ball_positions[0]):
+            ball_positions[idx] = [0, 0]
+        for idx in range(indexes_with_ball_positions[-1] + 1, len(has_ball_positions)):
+            ball_positions[idx] = [0, 0]
         for start_index, end_index in zip(indexes_with_ball_positions[:-1], indexes_with_ball_positions[1:]):
             start_position = np.array(ball_positions[start_index])
             end_position = np.array(ball_positions[end_index])
@@ -390,6 +399,7 @@ def main():
                 new_position = ratio * start_position + (1 - ratio) * end_position
                 ball_positions[idx] = new_position
                 has_ball_positions[idx] = True
+        # print('ball positions after fill up', ball_positions)
 
         # add more frames to smoothen the videos
         frames_to_add = 19
@@ -453,7 +463,7 @@ def main():
 
             #draw ball position
             if has_ball_position:
-                cv2.circle(new_court_image, ball_position, 3, (130, 0, 75), 3)
+                cv2.circle(new_court_image, tuple(ball_position), 3, (130, 0, 75), 3)
 
             court_images.append(new_court_image)
             cv2.imshow('court image', new_court_image)
@@ -465,6 +475,7 @@ def main():
         # calculate the distance travelled by 4 different players
         distance_travelled = [[0] for _ in range(4)]
         for idx, selected_players_feet in enumerate(all_selected_players_feet[:-1]):
+            print(len(selected_players_feet))
             for i in range(len(selected_players_feet)):
                 next_frame_player_position = all_selected_players_feet[idx+1][i]
                 distance = distance_travelled[i][-1] + calculate_distance(selected_players_feet[i], next_frame_player_position)
