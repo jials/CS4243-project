@@ -156,8 +156,6 @@ def stitchImages(base, other_images, H_arr):
     stitch_results = []
     kernel = np.ones((4,4),np.uint8)
     for index, image in enumerate(other_images):
-        if index == len(other_images) - 1:
-            continue
         translation_matrix = np.array([[1,0,-top_left[0]],[0,1,-top_left[1]],[0,0,1]])
         transformed_img = cv2.warpPerspective(image, np.dot(translation_matrix, H_arr[index]), transformed_shape)
 
