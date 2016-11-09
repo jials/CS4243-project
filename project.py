@@ -191,12 +191,12 @@ def usage():
     print "usage: " + sys.argv[0] + \
         " -o <operation>" + \
         " -f <filename>" + \
-        " [optional] -s <starting_frame_for_handpick>"
+        " [optional] -s <starting_frame_for_handpick> -t <second_for_video_cutting"
 
 def main():
     video_file = operation = None
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'o:f:s:')
+        opts, args = getopt.getopt(sys.argv[1:], 'o:f:s:t:')
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -208,6 +208,8 @@ def main():
             video_file = a
         elif o == '-s':
             starting_frame = int(a)
+        elif o == '-t':
+            cut_second = util.int_or_float(a)
         else:
             assert False, "unhandled option"
 
@@ -386,6 +388,14 @@ def main():
         # warp = cv2.warpPerspective(stitched_image, H, (width, height))
         # cv2.imwrite('warp.jpg', warp)
 
+    elif operation == "cut":
+        if len(opts) < 3:
+            print "Second of video to cut is not indicated."
+            return
+
+        util.cut_video(video_file, cut_second)
+
+        print "Video is cut successfully."
     else:
         print 'Operation is not supported.'
         sys.exit(2)
