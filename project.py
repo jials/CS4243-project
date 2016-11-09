@@ -154,11 +154,15 @@ def stitchImages(base, other_images, H_arr):
 
     result = np.zeros([transformed_shape[1], transformed_shape[0], 3])
     stitch_results = []
+    kernel = np.ones((4,4),np.uint8)
     for index, image in enumerate(other_images):
+        if index == len(other_images) - 1:
+            continue
         translation_matrix = np.array([[1,0,-top_left[0]],[0,1,-top_left[1]],[0,0,1]])
         transformed_img = cv2.warpPerspective(image, np.dot(translation_matrix, H_arr[index]), transformed_shape)
-        # transformed_img[-top_left[1]:h1-top_left[1],-top_left[0]:w1-top_left[0]] = base
+
         gray_transformed_img = cv2.cvtColor(transformed_img, cv2.COLOR_BGR2GRAY) # image to add in existing result
+        gray_transformed_img = cv2.erode(gray_transformed_img, kernel, iterations = 1)
         _, mask = cv2.threshold(gray_transformed_img, 30, 255, cv2.THRESH_BINARY)
         mask_inverse = cv2.bitwise_not(mask)
         region_of_interest = cv2.bitwise_and(transformed_img, transformed_img, mask=mask)
@@ -170,7 +174,7 @@ def stitchImages(base, other_images, H_arr):
     panaroma_image = result.copy()
     for index, stitched_image in enumerate(stitch_results):
         gray_stitched_image = cv2.cvtColor(stitched_image, cv2.COLOR_BGR2GRAY) # image to add in existing result
-        _, mask = cv2.threshold(gray_stitched_image, 30, 255, cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(gray_stitched_image, 10, 255, cv2.THRESH_BINARY)
         mask_inverse = cv2.bitwise_not(mask)
         region_of_interest = cv2.bitwise_and(stitched_image, stitched_image, mask=mask)
         prev_result = cv2.bitwise_and(panaroma_image, panaroma_image, mask=mask_inverse)
