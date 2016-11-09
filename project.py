@@ -276,7 +276,7 @@ def main():
                     cv2.imshow(str(start_index - skip_frame), imageMarker.mark_image_at_points(video_images[start_index - skip_frame], all_selected_pixels[-1], 9))
 
                 start_frame = video_images[start_index]
-                selected_pixels, _ = handpickPixel.handpick_image(start_frame, estimated_pixels)
+                selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)[0]
                 all_selected_pixels.append(selected_pixels)
                 temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(video_images[start_index: min(len(video_images), start_index + skip_frame + 1)], selected_pixels)
                 estimated_pixels = getLastCoordinatesWithStatusArr(marked_frame_coordinates, status_arr)
@@ -326,7 +326,7 @@ def main():
         work based on the assumption that points are picked by the following order:
         - top left, bottom left, top right, bottom right
         """
-        # selected_court_pixels, _ = handpickPixel.handpick_image(court_image)
+        # selected_court_pixels = handpickPixel.handpick_image(court_image)[0]
         selected_court_pixels = [[63, 86], [60, 248], [388, 84], [386, 246]]
 
         stitched_video_path = os.path.join(video_file_name, video_file_name + '.avi')
@@ -335,67 +335,111 @@ def main():
         height, width, _ = court_image.shape
 
         # select court corners from the panorama video
-        selected_court_corners, _ = handpickPixel.handpick_image(video_images[0])
+        selected_court_corners = handpickPixel.handpick_image(video_images[0])[0]
 
         H, inliers = cv2.findHomography(np.float32(selected_court_corners), np.float32(selected_court_pixels), cv.CV_RANSAC)
 
         estimated_pixels = []
         all_selected_players_feet = []
         all_is_jumping = []
+        ball_positions = []
 
         for index in range(0, len(video_images)):
             cv2.destroyAllWindows()
             if index > 0:
                 cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
-            selected_players_feet, is_jumping = handpickPixel.handpick_image(video_images[index], estimated_pixels)
+            selected_players_feet, is_jumping, player_index_with_ball = handpickPixel.handpick_image(video_images[index], estimated_pixels)
+
+            all_selected_players_feet.append(selected_players_feet)
+            all_is_jumping.append(is_jumping)
+            if player_index_with_ball == -1 and len(selected_players_feet) == 5:
+                #the fifth point is the ball (use when the ball hits the ground)
+                ball_positions.append(selected_players_feet[-1])
+            else:
+                ball_positions.append(selected_players_feet[player_index_with_ball] if player_index_with_ball != -1 else [-1, -1])
+
+            #use change detection estimate next frame position
             if not index == len(video_images) - 1:
                 temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
                     video_images[index: index + 2], selected_players_feet)
                 estimated_pixels = marked_frame_coordinates[-1]
-            all_selected_players_feet.append(selected_players_feet)
-            all_is_jumping.append(is_jumping)
+
+
         cv2.destroyAllWindows()
 
         util.save_players_feet(video_file_name, all_selected_players_feet)
         util.save_is_jumping(video_file_name, all_is_jumping)
+        util.save_ball_positions(video_file_name, ball_positions)
         # all_selected_players_feet = util.load_players_feet(video_file_name)
         # all_is_jumping = util.load_is_jumping(video_file_name)
+        # ball_positions = util.load_ball_positions(video_file_name)
 
         # colors for each players in the following order: Red, Yellow, Green, Blue
         colors = [(0, 0, 204), (0, 255, 255), (0, 204, 0), (204, 0, 0)]
+
+        has_ball_positions = [False if ball_position[0] == -1 and ball_position[1] == -1 else True for ball_position in ball_positions]
+        ball_positions = cv2.perspectiveTransform(np.array(ball_positions), H)
+
+        #fill up frame without ball position
+        indexes_with_ball_positions = np.where(np.array(has_ball_positions) == True)[0]
+        for start_index, end_index in zip(indexes_with_ball_positions[:-1], indexes_with_ball_positions[1:]):
+            start_position = np.array(ball_positions[start_index])
+            end_position = np.array(ball_positions[end_index])
+            for idx in range(start_index + 1, end_index):
+                ratio = float(idx) / (end_index - start_index)
+                new_position = ratio * start_position + (1 - ratio) * end_position
+                ball_positions[idx] = new_position
+                has_ball_positions[idx] = True
 
         # add more frames to smoothen the videos
         frames_to_add = 19
         projected_all_selected_players_feet = [all_selected_players_feet[0]]
         projected_all_is_jumping = [all_is_jumping[0]]
+        projected_ball_positions = [ball_positions[0]]
         for idx in range(len(all_selected_players_feet) - 1):
             cur_players_feet = all_selected_players_feet[idx]
             next_players_feet = all_selected_players_feet[idx + 1]
             cur_is_jumping = all_is_jumping[idx]
-            next_is_jumping = all_is_jumping[idx]
+            next_is_jumping = all_is_jumping[idx + 1]
+            cur_ball_position = ball_positions[idx]
+            next_ball_position = ball_positions[idx + 1]
 
             for fr in range(frames_to_add):
                 ratio = float(fr) / frames_to_add
+
+                #add frame info for feet
                 new_players_feet = []
                 for cur_player_feet, next_player_feet in zip(cur_players_feet, next_players_feet):
                     new_player_feet = ratio * np.array(cur_player_feet) + (1 - ratio) * np.array(next_player_feet)
                     new_players_feet.append(new_player_feet)
+                projected_all_selected_players_feet.append(new_players_feet)
+
+                #add frame info for jumping
                 if ratio <= 0.5:
                     projected_all_is_jumping.append(cur_is_jumping)
                 else:
                     projected_all_is_jumping.append(next_is_jumping)
 
-                projected_all_selected_players_feet.append(new_players_feet)
+                #add frame info for player with ball
+                if has_ball_positions[idx] == True and has_ball_positions[idx + 1] == True:
+                    projected_ball_positions.append(ratio * cur_ball_position + (1 - ratio) * next_ball_position)
+                else:
+                    projected_ball_positions.append([-50, -50])
 
             projected_all_selected_players_feet.append(next_players_feet)
             projected_all_is_jumping.append(next_is_jumping)
+            projected_ball_positions.append(next_ball_position)
 
         all_selected_players_feet = projected_all_selected_players_feet
         all_is_jumping = projected_all_is_jumping
+        ball_positions = projected_ball_positions
+
         # calculate the new position of the player with respect to top-down view
         court_images = []
-        for selected_players_feet, is_jumping in zip(all_selected_players_feet, all_is_jumping):
+        for selected_players_feet, is_jumping, ball_position, has_ball_position in zip(all_selected_players_feet, all_is_jumping, ball_positions, has_ball_positions):
             new_court_image = court_image.copy()
+
+            #draw player position
             for idx, player_feet in enumerate(selected_players_feet):
                 if idx >= 4:
                     break
@@ -406,6 +450,11 @@ def main():
                 cv2.circle(new_court_image, (x, y), 5, colors[idx], 6)
                 if is_jumping[idx]:
                     cv2.circle(new_court_image, (x, y), 5, (0, 0, 0), 3)
+
+            #draw ball position
+            if has_ball_position:
+                cv2.circle(new_court_image, ball_position, 3, (130, 0, 75), 3)
+
             court_images.append(new_court_image)
             cv2.imshow('court image', new_court_image)
             cv2.waitKey(0)

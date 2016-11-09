@@ -38,10 +38,21 @@ def load_is_jumping(video_file):
         is_jumping = pickle.load(f)
     return is_jumping
 
+def load_ball_positions(video_file):
+    video_path = os.path.join(video_file, video_file + '_ball.pickle')
+    with open(video_path, 'rb') as f:
+        ball_positions = pickle.load(f)
+    return ball_positions
+
 def save_is_jumping(video_file, coordinates):
     video_path = os.path.join(video_file, video_file + '_is_jumping.pickle')
     with open(video_path, 'wb') as f:
         pickle.dump(coordinates, f, pickle.HIGHEST_PROTOCOL)
+
+def save_ball_positions(video_file, ball_positions):
+    video_path = os.path.join(video_file, video_file + '_ball.pickle')
+    with open(video_path, 'wb') as f:
+        pickle.dump(ball_positions, f, pickle.HIGHEST_PROTOCOL)
 
 def cut_video(video_file, cut_second):
     video_file_name, _ = video_file.split('.')

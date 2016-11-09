@@ -11,6 +11,9 @@ last_selected_index = -1
 is_j_mode = False
 is_jumping = []
 
+is_b_mode = False
+player_index_with_ball = -1
+
 def mark_all_points():
     marked_image = original_image.copy()
     for index in range(len(selected_pixels)):
@@ -18,10 +21,18 @@ def mark_all_points():
         x = int(pixel[0])
         y = int(pixel[1])
         marked_image = imageMarker.mark_image_at_point(marked_image, y, x, 9, imageMarker.colors[index])
+        #mark jump
+        if index < len(is_jumping) and is_jumping[index]:
+            cv2.circle(marked_image, (x, y), 3, (0, 0, 0), 3)
+
+        #mark ball
+        if player_index_with_ball == index:
+            cv2.circle(marked_image, (x, y), 2, (200, 100, 0), 2)
     return marked_image
 
 def mouse_click(event, x, y, flags, param):
-    global image, selected_pixels, editing_index, is_jumping, is_j_mode, last_selected_index
+    global image, selected_pixels, editing_index, is_jumping, is_j_mode
+    global last_selected_index, is_b_mode, player_index_with_ball
     if event == 1: #mouse click
         for index in range(len(selected_pixels)):
             pixel = selected_pixels[index]
@@ -39,22 +50,37 @@ def mouse_click(event, x, y, flags, param):
         if editing_index > -1:
             last_selected_index = editing_index
             selected_pixels[editing_index] = [x, y]
-            image = mark_all_points()
+
             # mark that the player is jumping at this frame
             if is_j_mode:
                 is_jumping[editing_index] = True
                 is_j_mode = False
+            elif is_b_mode:
+                player_index_with_ball = editing_index
+                is_b_mode = False
+
+            image = mark_all_points()
             editing_index = -1
 
+def initiate_global_value():
+    global image, original_image
+    global is_jumping, is_j_mode, last_selected_index
+    global is_b_mode, player_index_with_ball
+    image = original_image.copy()
+    is_jumping = [False for i in range(4)]
+    is_j_mode = False
+    is_b_mode = False
+    last_selected_index = -1
+    player_index_with_ball = -1
 
 def handpick_image(img, estimated_pixels = []):
-    global image, original_image, selected_pixels, is_jumping, is_j_mode, last_selected_index
+    global image, original_image, selected_pixels
+    global is_jumping, is_j_mode, last_selected_index
+    global is_b_mode, player_index_with_ball
     selected_pixels = estimated_pixels
     original_image = img
-    is_jumping = [False for i in range(4)]
-    image = img.copy()
-    is_j_mode = False
-    last_selected_index = -1
+    initiate_global_value()
+
     _, width, _ = original_image.shape
 
     if len(estimated_pixels) > 0:
@@ -67,11 +93,15 @@ def handpick_image(img, estimated_pixels = []):
 
         if key == ord('r'):
             selected_pixels = []
-            image = original_image.copy()
-            is_jumping = [False for i in range(4)]
+            initiate_global_value()
 
         if key == ord('j'):
             is_j_mode = True
+            is_b_mode = False
+
+        if key == ord('b'):
+            is_b_mode = True
+            is_j_mode = False
 
         if key == ord('c'):
             break
@@ -93,4 +123,4 @@ def handpick_image(img, estimated_pixels = []):
                 selected_pixels[last_selected_index][0] = min(width, selected_pixels[last_selected_index][0] + 1)
                 image = mark_all_points()
 
-    return selected_pixels, is_jumping
+    return selected_pixels, is_jumping, player_index_with_ball
