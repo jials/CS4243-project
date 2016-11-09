@@ -331,23 +331,23 @@ def main():
         all_selected_players_feet = []
         all_is_jumping = []
 
-        # for index in range(0, len(video_images)):
-        #     cv2.destroyAllWindows()
-        #     if index > 0:
-        #         cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
-        #     selected_players_feet, is_jumping = handpickPixel.handpick_image(video_images[index], estimated_pixels)
-        #     if not index == len(video_images) - 1:
-        #         temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
-        #             video_images[index: index + 2], selected_players_feet)
-        #         estimated_pixels = marked_frame_coordinates[-1]
-        #     all_selected_players_feet.append(selected_players_feet)
-        #     all_is_jumping.append(is_jumping)
-        # cv2.destroyAllWindows()
-        #
-        # util.save_players_feet(video_file_name, all_selected_players_feet)
-        # util.save_is_jumping(video_file_name, all_is_jumping)
-        all_selected_players_feet = util.load_players_feet(video_file_name)
-        all_is_jumping = util.load_is_jumping(video_file_name)
+        for index in range(0, len(video_images)):
+            cv2.destroyAllWindows()
+            if index > 0:
+                cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
+            selected_players_feet, is_jumping = handpickPixel.handpick_image(video_images[index], estimated_pixels)
+            if not index == len(video_images) - 1:
+                temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
+                    video_images[index: index + 2], selected_players_feet)
+                estimated_pixels = marked_frame_coordinates[-1]
+            all_selected_players_feet.append(selected_players_feet)
+            all_is_jumping.append(is_jumping)
+        cv2.destroyAllWindows()
+
+        util.save_players_feet(video_file_name, all_selected_players_feet)
+        util.save_is_jumping(video_file_name, all_is_jumping)
+        # all_selected_players_feet = util.load_players_feet(video_file_name)
+        # all_is_jumping = util.load_is_jumping(video_file_name)
 
         # colors for each players in the following order: Red, Yellow, Green, Blue
         colors = [(0, 0, 204), (0, 255, 255), (0, 204, 0), (204, 0, 0)]
