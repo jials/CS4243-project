@@ -32,6 +32,17 @@ def save_players_feet(video_file, coordinates):
     with open(video_path, 'wb') as f:
         pickle.dump(coordinates, f, pickle.HIGHEST_PROTOCOL)
 
+def load_is_jumping(video_file):
+    video_path = os.path.join(video_file, video_file + '_is_jumping.pickle')
+    with open(video_path, 'rb') as f:
+        is_jumping = pickle.load(f)
+    return is_jumping
+
+def save_is_jumping(video_file, coordinates):
+    video_path = os.path.join(video_file, video_file + '_is_jumping.pickle')
+    with open(video_path, 'wb') as f:
+        pickle.dump(coordinates, f, pickle.HIGHEST_PROTOCOL)
+
 def cut_video(video_file, cut_second):
     video_file_name, _ = video_file.split('.')
     first_part_filename = video_file_name + "_first"
