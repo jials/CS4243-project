@@ -264,7 +264,7 @@ def main():
                     cv2.imshow(str(start_index - skip_frame), imageMarker.mark_image_at_points(video_images[start_index - skip_frame], all_selected_pixels[-1], 9))
 
                 start_frame = video_images[start_index]
-                selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)
+                selected_pixels, _ = handpickPixel.handpick_image(start_frame, estimated_pixels)
                 all_selected_pixels.append(selected_pixels)
                 temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(video_images[start_index: min(len(video_images), start_index + skip_frame + 1)], selected_pixels)
                 estimated_pixels = getLastCoordinatesWithStatusArr(marked_frame_coordinates, status_arr)
@@ -323,22 +323,25 @@ def main():
         height, width, _ = court_image.shape
 
         # select court corners from the panorama video
-        selected_court_corners = handpickPixel.handpick_image(video_images[0])
+        selected_court_corners, _ = handpickPixel.handpick_image(video_images[0])
 
         H, inliers = cv2.findHomography(np.float32(selected_court_corners), np.float32(selected_court_pixels), cv.CV_RANSAC)
 
         estimated_pixels = []
         all_selected_players_feet = []
+        all_is_jumping = []
+
         # for index in range(0, len(video_images)):
         #     cv2.destroyAllWindows()
         #     if index > 0:
         #         cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
-        #     selected_players_feet = handpickPixel.handpick_image(video_images[index], estimated_pixels)
+        #     selected_players_feet, is_jumping = handpickPixel.handpick_image(video_images[index], estimated_pixels)
         #     if not index == len(video_images) - 1:
         #         temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
         #             video_images[index: index + 2], selected_players_feet)
         #         estimated_pixels = marked_frame_coordinates[-1]
         #     all_selected_players_feet.append(selected_players_feet)
+        #     all_is_jumping.append(is_jumping)
         # cv2.destroyAllWindows()
 
         # util.save_players_feet(video_file_name, all_selected_players_feet)

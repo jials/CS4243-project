@@ -7,6 +7,9 @@ original_image = []
 image = []
 editing_index = -1
 
+is_j_mode = False
+is_jumping = []
+
 def mark_all_points():
     marked_image = original_image.copy()
     for index in range(len(selected_pixels)):
@@ -34,14 +37,19 @@ def mouse_click(event, x, y, flags, param):
         if editing_index > -1:
             selected_pixels[editing_index] = [x, y]
             image = mark_all_points()
+            # mark that the player is jumping at this frame
+            if is_j_mode:
+                is_jumping[editing_index] = True
             editing_index = -1
 
 
 def handpick_image(img, estimated_pixels = []):
-    global image, original_image, selected_pixels
+    global image, original_image, selected_pixels, is_jumping
     selected_pixels = estimated_pixels
     original_image = img
+    is_jumping = [False for i in range(4)]
     image = img.copy()
+
     if len(estimated_pixels) > 0:
         image = mark_all_points()
     cv2.namedWindow('pick point')
@@ -54,9 +62,12 @@ def handpick_image(img, estimated_pixels = []):
             selected_pixels = []
             image = original_image.copy()
 
+        if key == ord('j'):
+            is_j_mode = True
+
         if key == ord('c'):
             break
 
     # cv2.destroyAllWindows()
 
-    return selected_pixels
+    return selected_pixels, is_jumping
