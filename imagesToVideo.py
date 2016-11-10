@@ -4,7 +4,7 @@ import numpy as np
 def grayscale_image_to_video(images, fps, videoName):
     height , width =  images[0].shape
 
-    fourcc = cv2.cv.CV_FOURCC(*'XVID')
+    fourcc = cv2.cv.CV_FOURCC('m', 'p', '4', 'v')
     video = cv2.VideoWriter(videoName + '.avi',fourcc,fps,(width,height))
 
     for i in range(len(images)):
@@ -15,7 +15,7 @@ def grayscale_image_to_video(images, fps, videoName):
 def images_to_video(images, fps, videoName):
     height, width, _ = images[0].shape
 
-    fourcc = cv2.cv.CV_FOURCC(*'XVID')
+    fourcc = cv2.cv.CV_FOURCC('m', 'p', '4', 'v')
     video = cv2.VideoWriter(videoName + '.avi',fourcc,fps,(width,height))
 
     for i in range(len(images)):
