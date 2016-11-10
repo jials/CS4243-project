@@ -4,7 +4,8 @@ import imagesToVideo
 import cv2
 import cv2.cv as cv
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+import math
 
 def int_or_float(s):
     try:
@@ -60,35 +61,47 @@ def concatenate_video(video_files):
     if not os.path.isdir('./concatenatedVideos'):
         os.mkdir('concatenatedVideos')
 
-    videos = []
-
-    for video in video_files:
-        images, _ = get_all_frame_images_and_fps(video)
-        videos.append(images)
-
     cap = cv2.VideoCapture(video_files[0])
     frame_width = int(cap.get(cv.CV_CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv.CV_CAP_PROP_FRAME_HEIGHT))
     fps = int(cap.get(cv.CV_CAP_PROP_FPS))
     frame_count = int(cap.get(cv.CV_CAP_PROP_FRAME_COUNT))
 
-    print frame_width, "-", frame_height, "-", fps, "-", frame_count
+    videos = []
+
+    for idx, video in enumerate(video_files):
+        images, _ = get_all_frame_images_and_fps(video)
+        if idx > 0:
+            resized_images = []
+            for image in images:
+                resized_image = cv2.resize(image, (frame_width, frame_height))
+                resized_images.append(resized_image)
+
+            videos.append(resized_images)
+        else:
+            videos.append(images)
+
     print "start concatenating videos"
 
     concatenatedVideo = []
-    frameIncrement = 0
-    currFrame = 0
 
-    print len(videos[0])
-    print len(videos[1])
+    threshold1 = len(videos[1]) * 1.0 / len(videos[0])
+    threshold2 = len(videos[2]) * 1.0 / len(videos[0])
+
     for i in xrange(frame_count):
         eachFrame = np.zeros((2 * frame_height, 2 * frame_width, 3), dtype="uint8")
+
         eachFrame[0:frame_height, 0:frame_width] = videos[0][i]
-        if(frameIncrement == fps):
-            currFrame += 1
-            frameIncrement = 0
-        eachFrame[0:frame_height, frame_width: frame_width+frame_width] = videos[1][currFrame]
-        frameIncrement += 1
+
+        frameIndex1 = int(round(threshold1 * i))
+        frameIndex1 = frameIndex1 if frameIndex1 < len(videos[1]) else len(videos[1]) - 1
+
+        eachFrame[0:frame_height, frame_width:frame_width+frame_width] = videos[1][frameIndex1]
+
+        frameIndex2 = int(round(threshold2 * i))
+        frameIndex2 = frameIndex2 if frameIndex2 < len(videos[2]) else len(videos[2]) - 1
+        eachFrame[frame_height:frame_height+frame_height,0:frame_width] = videos[2][frameIndex2]
+
         concatenatedVideo.append(eachFrame)
 
     print "successfully concatenated videos"
