@@ -3,6 +3,7 @@ import os
 import imagesToVideo
 import cv2
 import cv2.cv as cv
+import numpy as np
 
 def int_or_float(s):
     try:
@@ -54,6 +55,54 @@ def save_ball_positions(video_file, ball_positions):
     with open(video_path, 'wb') as f:
         pickle.dump(ball_positions, f, pickle.HIGHEST_PROTOCOL)
 
+def concatenate_video(video_files):
+    videos = []
+
+    print "start retrieving all video frames"
+
+    for video in video_files:
+        cap = cv2.VideoCapture(video)
+        images = []
+
+        frame_count = int(cap.get(cv.CV_CAP_PROP_FRAME_COUNT))
+        for i in xrange(frame_count):
+            _, img = cap.read()
+            images.append(img)
+
+        videos.append(images)
+        cap.release()
+
+    print "finished retrieving all video frames"
+
+    cap = cv2.VideoCapture(video_files[0])
+    frame_width = int(cap.get(cv.CV_CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv.CV_CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv.CV_CAP_PROP_FPS))
+    frame_count = int(cap.get(cv.CV_CAP_PROP_FRAME_COUNT))
+
+    print frame_width, "-", frame_height, "-", fps, "-", frame_count
+    print "start concatenating videos"
+
+    concatenatedVideo = []
+    frameIncrement = 0
+    currFrame = 0
+
+    for i in xrange(frame_count):
+        eachFrame = np.zeros((2 * frame_height, 2 * frame_width, 3), dtype="uint8")
+        eachFrame[0:frame_height, 0:frame_width] = videos[0][i]
+        if(frameIncrement == fps):
+            currFrame += 1
+            frameIncrement = 0
+        # eachFrame[0:frame_height, frame_width: frame_width+frame_width] = videos[1][currFrame]
+        frameIncrement += 1
+        concatenatedVideo.append(eachFrame)
+
+    print "successful concatenating videos"
+
+    imagesToVideo.images_to_video(concatenatedVideo, fps, "concatenate_test")
+
+    cap.release()
+
 def cut_video(video_file, cut_second):
     video_file_name, _ = video_file.split('.')
     first_part_filename = video_file_name + "_first"
@@ -86,4 +135,3 @@ def cut_video(video_file, cut_second):
 
     imagesToVideo.images_to_video(images, fps, second_part_filename)
 
-    cap.release()

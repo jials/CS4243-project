@@ -228,8 +228,9 @@ def main():
         usage()
         sys.exit(2)
 
-    video_file_name, _ = video_file.split('.')
-    initFolder(video_file)
+    if operation != 'concatenate':
+        video_file_name, _ = video_file.split('.')
+        initFolder(video_file)
 
     if operation == 'edge':
         images, fps = video_to_sobel_edge_detection(video_file)
@@ -494,6 +495,10 @@ def main():
         util.cut_video(video_file, cut_second)
 
         print "Video is cut successfully."
+    elif operation == "concatenate":
+        video_files = video_file.split(",")
+        util.concatenate_video(video_files)
+        return
     else:
         print 'Operation is not supported.'
         sys.exit(2)
