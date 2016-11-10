@@ -4,6 +4,7 @@ import imagesToVideo
 import cv2
 import cv2.cv as cv
 import numpy as np
+import matplotlib.pyplot as plt 
 
 def int_or_float(s):
     try:
@@ -56,23 +57,14 @@ def save_ball_positions(video_file, ball_positions):
         pickle.dump(ball_positions, f, pickle.HIGHEST_PROTOCOL)
 
 def concatenate_video(video_files):
+    if not os.path.isdir('./concatenatedVideos'):
+        os.mkdir('concatenatedVideos')
+
     videos = []
 
-    print "start retrieving all video frames"
-
     for video in video_files:
-        cap = cv2.VideoCapture(video)
-        images = []
-
-        frame_count = int(cap.get(cv.CV_CAP_PROP_FRAME_COUNT))
-        for i in xrange(frame_count):
-            _, img = cap.read()
-            images.append(img)
-
+        images, _ = get_all_frame_images_and_fps(video)
         videos.append(images)
-        cap.release()
-
-    print "finished retrieving all video frames"
 
     cap = cv2.VideoCapture(video_files[0])
     frame_width = int(cap.get(cv.CV_CAP_PROP_FRAME_WIDTH))
@@ -87,17 +79,19 @@ def concatenate_video(video_files):
     frameIncrement = 0
     currFrame = 0
 
+    print len(videos[0])
+    print len(videos[1])
     for i in xrange(frame_count):
         eachFrame = np.zeros((2 * frame_height, 2 * frame_width, 3), dtype="uint8")
         eachFrame[0:frame_height, 0:frame_width] = videos[0][i]
         if(frameIncrement == fps):
             currFrame += 1
             frameIncrement = 0
-        # eachFrame[0:frame_height, frame_width: frame_width+frame_width] = videos[1][currFrame]
+        eachFrame[0:frame_height, frame_width: frame_width+frame_width] = videos[1][currFrame]
         frameIncrement += 1
         concatenatedVideo.append(eachFrame)
 
-    print "successful concatenating videos"
+    print "successfully concatenated videos"
 
     imagesToVideo.images_to_video(concatenatedVideo, fps, "concatenate_test")
 
@@ -153,3 +147,23 @@ def get_all_frame_images_and_fps(video_file):
         images.append(img)
     cap.release()
     return images, fps
+
+def drawTable(data):
+    fig = plt.figure()
+    ax = plt.gca()
+    ax.set_title('Statistic')
+
+    colLabels = ['Travel Distance', 'Number of Jump']
+    rowLabels = ['Player1', 'Player2', 'Player3', 'Player4']
+    tableValues =[[11,12,13],[21,22,23],[31,32,33]]
+
+    the_table = plt.table(cellText=tableValues, rowLoc='right', rowLabels=rowLabels,
+                         colWidths=[.5,.5], colLabels=colLabels,
+                         colLoc='center', loc='center')
+
+    plt.show()
+    # the_table = plt.table(cellText=tableValues, rowLoc='right',
+                         # rowColours=colors, rowLabels=rowLabels,
+                         # colWidths=[.5,.5], colLabels=colLabels,
+                         # colLoc='center', loc='center')
+
