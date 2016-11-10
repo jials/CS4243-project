@@ -19,34 +19,14 @@ import imagesToVideo
 import util
 import imageMarker
 
-
 def video_to_sobel_edge_detection(video_file):
-    video_images, fps = get_all_frame_images_and_fps(video_file)
+    video_images, fps = util.get_all_frame_images_and_fps(video_file)
     video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name + '/edge'):
         os.mkdir(video_file_name + '/edge')
 
     edge_images = edgeDetection.detect_edges(video_images, video_file_name)
     return edge_images, fps
-
-def get_all_frame_images_and_fps(video_file):
-    cap = cv2.VideoCapture(video_file)
-    frame_width = int(cap.get(cv.CV_CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv.CV_CAP_PROP_FRAME_HEIGHT))
-    fps = int(cap.get(cv.CV_CAP_PROP_FPS))
-    frame_count = int(cap.get(cv.CV_CAP_PROP_FRAME_COUNT))
-
-    print('Frame Width ', frame_width)
-    print('Frame Height ', frame_height)
-    print('FPS ', fps)
-    print('Frame Count', frame_count)
-
-    images = []
-    for fr in range(0, frame_count):
-        _, img = cap.read()
-        images.append(img)
-    cap.release()
-    return images, fps
 
 def mark_corners_on_all_images(images, folder_name):
     marked_images = []
@@ -61,7 +41,7 @@ def mark_corners_on_all_images(images, folder_name):
     return marked_images
 
 def video_to_corner_detection(video_file):
-    video_images, fps = get_all_frame_images_and_fps(video_file)
+    video_images, fps = util.get_all_frame_images_and_fps(video_file)
     video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name + '/corners'):
         os.mkdir(video_file_name + '/corners')
@@ -246,7 +226,7 @@ def main():
         if len(opts) < 3:
             starting_frame = 0
 
-        video_images, fps = get_all_frame_images_and_fps(video_file)
+        video_images, fps = util.get_all_frame_images_and_fps(video_file)
         first_frame = video_images[0]
         height, width, _ = first_frame.shape
 
@@ -332,7 +312,7 @@ def main():
         selected_court_pixels = [[63, 86], [60, 248], [388, 84], [386, 246]]
 
         stitched_video_path = os.path.join(video_file_name, video_file_name + '.avi')
-        video_images, fps = get_all_frame_images_and_fps(stitched_video_path)
+        video_images, fps = util.get_all_frame_images_and_fps(stitched_video_path)
 
         height, width, _ = court_image.shape
 

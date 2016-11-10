@@ -135,3 +135,21 @@ def cut_video(video_file, cut_second):
 
     imagesToVideo.images_to_video(images, fps, second_part_filename)
 
+def get_all_frame_images_and_fps(video_file):
+    cap = cv2.VideoCapture(video_file)
+    frame_width = int(cap.get(cv.CV_CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv.CV_CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv.CV_CAP_PROP_FPS))
+    frame_count = int(cap.get(cv.CV_CAP_PROP_FRAME_COUNT))
+
+    print('Frame Width ', frame_width)
+    print('Frame Height ', frame_height)
+    print('FPS ', fps)
+    print('Frame Count', frame_count)
+
+    images = []
+    for fr in range(0, frame_count):
+        _, img = cap.read()
+        images.append(img)
+    cap.release()
+    return images, fps
