@@ -350,7 +350,6 @@ def main():
                 cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
             selected_players_feet, is_jumping, player_index_with_ball = handpickPixel.handpick_image(video_images[index], estimated_pixels)
 
-            all_selected_players_feet.append(selected_players_feet)
             all_is_jumping.append(is_jumping)
             if player_index_with_ball == 4 and len(selected_players_feet) == 5:
                 #the fifth point is the ball (use when the ball hits the ground)
@@ -358,6 +357,7 @@ def main():
                 selected_players_feet = selected_players_feet[:4]
             else:
                 ball_positions.append(selected_players_feet[player_index_with_ball] if player_index_with_ball != -1 else [-1, -1])
+            all_selected_players_feet.append(selected_players_feet)
 
             #use change detection estimate next frame position
             if not index == len(video_images) - 1:
@@ -395,60 +395,68 @@ def main():
             start_position = np.array(ball_positions[start_index])
             end_position = np.array(ball_positions[end_index])
             for idx in range(start_index + 1, end_index):
-                ratio = float(idx) / (end_index - start_index)
-                new_position = ratio * start_position + (1 - ratio) * end_position
+                ratio = float(idx - start_index) / (end_index - start_index)
+                new_position = (1 - ratio) * start_position + ratio * end_position
                 ball_positions[idx] = new_position
                 has_ball_positions[idx] = True
-        # print('ball positions after fill up', ball_positions)
 
         # add more frames to smoothen the videos
-        frames_to_add = 19
-        projected_all_selected_players_feet = [all_selected_players_feet[0]]
-        projected_all_is_jumping = [all_is_jumping[0]]
-        projected_ball_positions = [ball_positions[0]]
-        for idx in range(len(all_selected_players_feet) - 1):
-            cur_players_feet = all_selected_players_feet[idx]
-            next_players_feet = all_selected_players_feet[idx + 1]
-            cur_is_jumping = all_is_jumping[idx]
-            next_is_jumping = all_is_jumping[idx + 1]
-            cur_ball_position = ball_positions[idx]
-            next_ball_position = ball_positions[idx + 1]
+        # frames_to_add = 19
+        # projected_all_selected_players_feet = [all_selected_players_feet[0]]
+        # projected_all_is_jumping = [all_is_jumping[0]]
+        # projected_ball_positions = [ball_positions[0]]
+        # projected_has_ball_positions = [has_ball_positions[0]]
+        # for idx in range(len(all_selected_players_feet) - 1):
+        #     cur_players_feet = all_selected_players_feet[idx]
+        #     next_players_feet = all_selected_players_feet[idx + 1]
+        #     cur_is_jumping = all_is_jumping[idx]
+        #     next_is_jumping = all_is_jumping[idx + 1]
+        #     cur_ball_position = ball_positions[idx]
+        #     next_ball_position = ball_positions[idx + 1]
+        #
+        #     for fr in range(frames_to_add):
+        #         ratio = float(fr) / frames_to_add
+        #
+        #         #add frame info for feet
+        #         new_players_feet = []
+        #         for cur_player_feet, next_player_feet in zip(cur_players_feet, next_players_feet):
+        #             new_player_feet = ratio * np.array(cur_player_feet) + (1 - ratio) * np.array(next_player_feet)
+        #             new_players_feet.append(new_player_feet)
+        #         projected_all_selected_players_feet.append(new_players_feet)
+        #
+        #         #add frame info for jumping
+        #         if ratio <= 0.5:
+        #             projected_all_is_jumping.append(cur_is_jumping)
+        #         else:
+        #             projected_all_is_jumping.append(next_is_jumping)
+        #
+        #         #add frame info for player with ball
+        #         if has_ball_positions[idx] == True and has_ball_positions[idx + 1] == True:
+        #             projected_ball_positions.append(ratio * cur_ball_position + (1 - ratio) * next_ball_position)
+        #             projected_has_ball_positions.append(True)
+        #         else:
+        #             projected_ball_positions.append([-50, -50])
+        #             projected_has_ball_positions.append(False)
+        #
+        #     projected_all_selected_players_feet.append(next_players_feet)
+        #     projected_all_is_jumping.append(next_is_jumping)
+        #     projected_ball_positions.append(next_ball_position)
+        #     projected_has_ball_positions.append(has_ball_positions[idx + 1])
+        #
+        # all_selected_players_feet = projected_all_selected_players_feet
+        # all_is_jumping = projected_all_is_jumping
+        # ball_positions = projected_ball_positions
+        # has_ball_positions = projected_has_ball_positions
 
-            for fr in range(frames_to_add):
-                ratio = float(fr) / frames_to_add
-
-                #add frame info for feet
-                new_players_feet = []
-                for cur_player_feet, next_player_feet in zip(cur_players_feet, next_players_feet):
-                    new_player_feet = ratio * np.array(cur_player_feet) + (1 - ratio) * np.array(next_player_feet)
-                    new_players_feet.append(new_player_feet)
-                projected_all_selected_players_feet.append(new_players_feet)
-
-                #add frame info for jumping
-                if ratio <= 0.5:
-                    projected_all_is_jumping.append(cur_is_jumping)
-                else:
-                    projected_all_is_jumping.append(next_is_jumping)
-
-                #add frame info for player with ball
-                if has_ball_positions[idx] == True and has_ball_positions[idx + 1] == True:
-                    projected_ball_positions.append(ratio * cur_ball_position + (1 - ratio) * next_ball_position)
-                else:
-                    projected_ball_positions.append([-50, -50])
-
-            projected_all_selected_players_feet.append(next_players_feet)
-            projected_all_is_jumping.append(next_is_jumping)
-            projected_ball_positions.append(next_ball_position)
-
-        all_selected_players_feet = projected_all_selected_players_feet
-        all_is_jumping = projected_all_is_jumping
-        ball_positions = projected_ball_positions
+        # print(len(all_selected_players_feet))
+        # print(len(all_is_jumping))
+        # print(len(ball_positions))
 
         # calculate the new position of the player with respect to top-down view
         court_images = []
         for selected_players_feet, is_jumping, ball_position, has_ball_position in zip(all_selected_players_feet, all_is_jumping, ball_positions, has_ball_positions):
             new_court_image = court_image.copy()
-
+            print(selected_players_feet, is_jumping, ball_position, has_ball_position)
             #draw player position
             for idx, player_feet in enumerate(selected_players_feet):
                 if idx >= 4:
@@ -463,20 +471,20 @@ def main():
 
             #draw ball position
             if has_ball_position:
-                cv2.circle(new_court_image, tuple(ball_position), 3, (130, 0, 75), 3)
+                cv2.circle(new_court_image, tuple(ball_position), 2, (255, 255, 255), 2)
 
             court_images.append(new_court_image)
             cv2.imshow('court image', new_court_image)
             cv2.waitKey(0)
         cv2.destroyAllWindows()
         video_path = os.path.join(video_file_name, video_file_name + '_court')
-        imagesToVideo.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
+        # imagesToVideo.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
+        imagesToVideo.images_to_video(court_images, fps, video_path)
 
         # calculate the distance travelled by 4 different players
         distance_travelled = [[0] for _ in range(4)]
         for idx, selected_players_feet in enumerate(all_selected_players_feet[:-1]):
-            print(len(selected_players_feet))
-            for i in range(len(selected_players_feet)):
+            for i in range(min(4, len(selected_players_feet))):
                 next_frame_player_position = all_selected_players_feet[idx+1][i]
                 distance = distance_travelled[i][-1] + calculate_distance(selected_players_feet[i], next_frame_player_position)
                 distance_travelled[i].append(distance)
