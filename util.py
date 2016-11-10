@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('TkAgg')
+
 import pickle
 import os
 import imagesToVideo
@@ -179,4 +182,40 @@ def drawTable(data):
                          # rowColours=colors, rowLabels=rowLabels,
                          # colWidths=[.5,.5], colLabels=colLabels,
                          # colLoc='center', loc='center')
+
+def drawStatsTable(distances, jumps):
+    fig = plt.figure()
+    plt.axis('off')
+    ax = plt.gca()
+    ax.set_title('Statistic')
+
+    colLabels = ['Player', 'Travel Distance', 'Number of Jump']
+    rowLabels = ['', '', '', '']
+
+    statsImages = []
+
+    _, N = np.shape(distances)
+    for i in xrange(N):
+        tableValues =[['',distances[0][i],jumps[0][i]],
+                        ['',distances[1][i],jumps[0][i]],
+                        ['',distances[2][i],jumps[0][i]],
+                        ['',distances[3][i],jumps[0][i]]]
+        # colours for each players in the following order: Red, Yellow, Green, Blue
+        colours = [[(0.8, 0, 0), (1, 1, 1), (1, 1, 1)],
+                    [(1, 1, 0), (1, 1, 1), (1, 1, 1)],
+                    [(0, 0.8, 0), (1, 1, 1), (1, 1, 1)],
+                    [(0, 0, 0.8), (1, 1, 1), (1, 1, 1)]]
+       
+        the_table = plt.table(cellText=tableValues, cellColours=colours, rowLoc='right', rowLabels=rowLabels,
+                             colWidths=[.3]*3, colLoc='center', colLabels=colLabels, loc='center')
+        the_table.scale(1, 4)
+        fig.canvas.draw()
+
+        # Now we can save it to a numpy array.
+        data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        statsImages.append(data)
+        
+        # plt.show()
+    imagesToVideo.images_to_video(data, 60, "testPlot")
 
