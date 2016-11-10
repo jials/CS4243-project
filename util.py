@@ -188,18 +188,17 @@ def drawTable(data):
                          # colWidths=[.5,.5], colLabels=colLabels,
                          # colLoc='center', loc='center')
 
-def drawStatsTable(distances, jumps):
-
+def drawStatsTable(distances, jumps, video_file_name):
     statsImages = []
+    video_file_name = video_file_name + "_stats"
 
     _, N = np.shape(distances)
     for i in xrange(N):
         fig = plt.figure()
         plt.axis('off')
         ax = plt.gca()
-        ax.set_title('Statistic')
 
-        colLabels = ['Player', 'Travel Distance', 'Number of Jump']
+        colLabels = ['Player', 'Travel Distance(m)', 'Number of Jump']
         rowLabels = ['', '', '', '']
 
         tableValues =[['',round(distances[0][i], 2),jumps[0][i]],
@@ -214,7 +213,7 @@ def drawStatsTable(distances, jumps):
        
         the_table = plt.table(cellText=tableValues, cellColours=colours, rowLoc='right', rowLabels=rowLabels,
                              colWidths=[.3]*3, colLoc='center', colLabels=colLabels, loc='center')
-        the_table.scale(1, 4)
+        the_table.scale(2, 8)
         fig.canvas.draw()
 
         # Now we can save it to a numpy array.
@@ -226,5 +225,5 @@ def drawStatsTable(distances, jumps):
         plt.close(fig)
         
         # plt.show()
-    imagesToVideo.images_to_video(statsImages, 60, "testPlot")
+    imagesToVideo.images_to_video(statsImages, 60, video_file_name)
 

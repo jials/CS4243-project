@@ -488,7 +488,7 @@ def main():
         distance_travelled, num_jumps_of_each_player = generate_statistics(all_selected_players_feet, all_is_jumping)
 
         # TODO: use the statistics generated here to draw the tables
-        util.drawStatsTable(distance_travelled, num_jumps_of_each_player)
+        util.drawStatsTable(distance_travelled, num_jumps_of_each_player, video_file_name)
     elif operation == "cut":
         if len(opts) < 3:
             print "Second of video to cut is not indicated."
