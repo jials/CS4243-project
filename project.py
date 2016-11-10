@@ -338,7 +338,7 @@ def main():
         - top left, bottom left, top right, bottom right
         """
         # selected_court_pixels = handpickPixel.handpick_image(court_image)[0]
-        selected_court_pixels = [[63, 86], [60, 248], [388, 84], [386, 246]]
+        selected_court_pixels = [[137, 140], [137, 498], [855, 139], [854, 498]]
 
         stitched_video_path = os.path.join(video_file_name, video_file_name + '.avi')
         video_images, fps = util.get_all_frame_images_and_fps(stitched_video_path)
