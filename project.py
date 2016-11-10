@@ -194,7 +194,7 @@ def generate_statistics(all_selected_players_feet, all_is_jumping):
     for idx, is_jumping in enumerate(all_is_jumping[:-1]):
         for i in range(min(4, len(is_jumping))):
             jump_cnt = num_jumps_of_each_player[i][-1]
-            if is_jumping[idx][i] is False and is_jumping[idx + 1][i] is True:
+            if all_is_jumping[idx][i] is False and all_is_jumping[idx + 1][i] is True:
                 jump_cnt += 1
             num_jumps_of_each_player[i].append(jump_cnt)
 
