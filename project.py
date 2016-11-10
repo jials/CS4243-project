@@ -172,6 +172,34 @@ def calculate_distance(pointA, pointB):
     B_x, B_y = pointB[0], pointB[1]
     return math.sqrt((B_x - A_x) * (B_x - A_x) + (B_y - A_y) * (B_y - A_y)) / length_pixel * standard_court_length
 
+def generate_statistics(all_selected_players_feet, all_is_jumping):
+    """
+        Generate statistics of the match
+        Distance travelled by each players, Number of jumps of each players
+    """
+    # calculate the distance travelled by 4 different players
+    distance_travelled = [[0] for _ in range(4)]
+    for idx, selected_players_feet in enumerate(all_selected_players_feet[:-1]):
+        for i in range(min(4, len(selected_players_feet))):
+            next_frame_player_position = all_selected_players_feet[idx + 1][i]
+            distance = distance_travelled[i][-1] + calculate_distance(selected_players_feet[i],
+                                                                      next_frame_player_position)
+            distance_travelled[i].append(distance)
+
+        for i in range(len(selected_players_feet), 4):
+            distance_travelled[i].append(0)
+
+    # calculate the number of time each player jumps each frame
+    num_jumps_of_each_player = [[0] for _ in range(4)]
+    for idx, is_jumping in enumerate(all_is_jumping[:-1]):
+        for i in range(min(4, len(is_jumping))):
+            jump_cnt = num_jumps_of_each_player[i][-1]
+            if is_jumping[idx][i] is False and is_jumping[idx + 1][i] is True:
+                jump_cnt += 1
+            num_jumps_of_each_player[i].append(jump_cnt)
+
+    return distance_travelled, num_jumps_of_each_player
+
 def initFolder(video_file):
     video_file_name, _ = video_file.split('.')
     if not os.path.isdir('./' + video_file_name):
@@ -182,6 +210,7 @@ def usage():
         " -o <operation>" + \
         " -f <filename>" + \
         " [optional] -s <starting_frame_for_handpick> -t <second_for_video_cutting"
+
 
 def main():
     video_file = operation = None
@@ -302,7 +331,7 @@ def main():
     elif operation == 'topdown':
         if len(opts) < 3:
             starting_frame = 0
-            
+
         court_image = cv2.imread('court.png')
         """
         work based on the assumption that points are picked by the following order:
@@ -456,16 +485,8 @@ def main():
         imagesToVideo.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
         # imagesToVideo.images_to_video(court_images, fps, video_path)
 
-        # calculate the distance travelled by 4 different players
-        distance_travelled = [[0] for _ in range(4)]
-        for idx, selected_players_feet in enumerate(all_selected_players_feet[:-1]):
-            for i in range(min(4, len(selected_players_feet))):
-                next_frame_player_position = all_selected_players_feet[idx+1][i]
-                distance = distance_travelled[i][-1] + calculate_distance(selected_players_feet[i], next_frame_player_position)
-                distance_travelled[i].append(distance)
-
-            for i in range(len(selected_players_feet), 4):
-                distance_travelled[i].append(0)
+        distance_travelled, num_jumps_of_each_player = generate_statistics(all_selected_players_feet, all_is_jumping)
+        # TODO: use the statistics generated here to draw the tables
 
     elif operation == "cut":
         if len(opts) < 3:
