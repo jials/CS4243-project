@@ -319,6 +319,9 @@ def main():
             imagesToVideo.images_to_video([marked_images[index] for index in range(0, len(marked_images), skip_frame)], fps/skip_frame, video_path)
 
     elif operation == 'topdown':
+        if len(opts) < 3:
+            starting_frame = 0
+            
         court_image = cv2.imread('court.png')
         """
         work based on the assumption that points are picked by the following order:
@@ -342,36 +345,38 @@ def main():
         all_is_jumping = []
         ball_positions = []
 
-        # for index in range(0, len(video_images)):
-        #     cv2.destroyAllWindows()
-        #     if index > 0:
-        #         cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
-        #     selected_players_feet, is_jumping, player_index_with_ball = handpickPixel.handpick_image(video_images[index], estimated_pixels)
-        #
-        #     all_is_jumping.append(is_jumping)
-        #     if player_index_with_ball == 4 and len(selected_players_feet) == 5:
-        #         #the fifth point is the ball (use when the ball hits the ground)
-        #         ball_positions.append(selected_players_feet[-1])
-        #         selected_players_feet = selected_players_feet[:4]
-        #     else:
-        #         ball_positions.append(selected_players_feet[player_index_with_ball] if player_index_with_ball != -1 else [-1, -1])
-        #     all_selected_players_feet.append(selected_players_feet)
-        #
-        #     #use change detection estimate next frame position
-        #     if not index == len(video_images) - 1:
-        #         temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
-        #             video_images[index: index + 2], selected_players_feet)
-        #         estimated_pixels = marked_frame_coordinates[-1]
-        #
-        #
-        # cv2.destroyAllWindows()
-        #
-        # util.save_players_feet(video_file_name, all_selected_players_feet)
-        # util.save_is_jumping(video_file_name, all_is_jumping)
-        # util.save_ball_positions(video_file_name, ball_positions)
-        all_selected_players_feet = util.load_players_feet(video_file_name)
-        all_is_jumping = util.load_is_jumping(video_file_name)
-        ball_positions = util.load_ball_positions(video_file_name)
+        if starting_frame == -1:
+            all_selected_players_feet = util.load_players_feet(video_file_name)
+            all_is_jumping = util.load_is_jumping(video_file_name)
+            ball_positions = util.load_ball_positions(video_file_name)
+        else:
+            for index in range(0, len(video_images)):
+                cv2.destroyAllWindows()
+                if index > 0:
+                    cv2.imshow(str(index - 1), imageMarker.mark_image_at_points(video_images[index - 1], selected_players_feet, 9))
+                selected_players_feet, is_jumping, player_index_with_ball = handpickPixel.handpick_image(video_images[index], estimated_pixels)
+
+                all_is_jumping.append(is_jumping)
+                if player_index_with_ball == 4 and len(selected_players_feet) == 5:
+                    #the fifth point is the ball (use when the ball hits the ground)
+                    ball_positions.append(selected_players_feet[-1])
+                    selected_players_feet = selected_players_feet[:4]
+                else:
+                    ball_positions.append(selected_players_feet[player_index_with_ball] if player_index_with_ball != -1 else [-1, -1])
+                all_selected_players_feet.append(selected_players_feet)
+
+                #use change detection estimate next frame position
+                if not index == len(video_images) - 1:
+                    temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(
+                        video_images[index: index + 2], selected_players_feet)
+                    estimated_pixels = marked_frame_coordinates[-1]
+
+
+            cv2.destroyAllWindows()
+
+            util.save_players_feet(video_file_name, all_selected_players_feet)
+            util.save_is_jumping(video_file_name, all_is_jumping)
+            util.save_ball_positions(video_file_name, ball_positions)
 
         # colors for each players in the following order: Red, Yellow, Green, Blue
         colors = [(0, 0, 204), (0, 255, 255), (0, 204, 0), (204, 0, 0)]
@@ -463,9 +468,9 @@ def main():
                 cv2.circle(new_court_image, tuple(ball_position), 2, (255, 255, 255), 2)
 
             court_images.append(new_court_image)
-            cv2.imshow('court image', new_court_image)
-            cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #     cv2.imshow('court image', new_court_image)
+        #     cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         video_path = os.path.join(video_file_name, video_file_name + '_court')
         imagesToVideo.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
         # imagesToVideo.images_to_video(court_images, fps, video_path)
