@@ -90,6 +90,7 @@ def concatenate_video(video_files):
 
     threshold1 = len(videos[1]) * 1.0 / len(videos[0])
     threshold2 = len(videos[2]) * 1.0 / len(videos[0])
+    threshold3 = len(videos[3]) * 1.0 / len(videos[0])
 
     for i in xrange(frame_count):
         eachFrame = np.zeros((2 * frame_height, 2 * frame_width, 3), dtype="uint8")
@@ -103,7 +104,11 @@ def concatenate_video(video_files):
 
         frameIndex2 = int(round(threshold2 * i))
         frameIndex2 = frameIndex2 if frameIndex2 < len(videos[2]) else len(videos[2]) - 1
-        eachFrame[frame_height:frame_height+frame_height,0:frame_width] = videos[2][frameIndex2]
+        eachFrame[frame_height:frame_height+frame_height, 0:frame_width] = videos[2][frameIndex2]
+
+        frameIndex3 = int(round(threshold3 * i))
+        frameIndex3 = frameIndex3 if frameIndex3 < len(videos[3]) else len(videos[3]) - 1
+        eachFrame[frame_height:frame_height+frame_height, frame_width:frame_width+frame_width] = videos[3][frameIndex3]
 
         concatenatedVideo.append(eachFrame)
 
@@ -184,22 +189,23 @@ def drawTable(data):
                          # colLoc='center', loc='center')
 
 def drawStatsTable(distances, jumps):
-    fig = plt.figure()
-    plt.axis('off')
-    ax = plt.gca()
-    ax.set_title('Statistic')
-
-    colLabels = ['Player', 'Travel Distance', 'Number of Jump']
-    rowLabels = ['', '', '', '']
 
     statsImages = []
 
     _, N = np.shape(distances)
     for i in xrange(N):
-        tableValues =[['',distances[0][i],jumps[0][i]],
-                        ['',distances[1][i],jumps[0][i]],
-                        ['',distances[2][i],jumps[0][i]],
-                        ['',distances[3][i],jumps[0][i]]]
+        fig = plt.figure()
+        plt.axis('off')
+        ax = plt.gca()
+        ax.set_title('Statistic')
+
+        colLabels = ['Player', 'Travel Distance', 'Number of Jump']
+        rowLabels = ['', '', '', '']
+
+        tableValues =[['',round(distances[0][i], 2),jumps[0][i]],
+                        ['',round(distances[1][i], 2),jumps[1][i]],
+                        ['',round(distances[2][i], 2),jumps[2][i]],
+                        ['',round(distances[3][i], 2),jumps[3][i]]]
         # colours for each players in the following order: Red, Yellow, Green, Blue
         colours = [[(0.8, 0, 0), (1, 1, 1), (1, 1, 1)],
                     [(1, 1, 0), (1, 1, 1), (1, 1, 1)],
@@ -215,7 +221,10 @@ def drawStatsTable(distances, jumps):
         data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
         data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
         statsImages.append(data)
+
+        plt.clf()
+        plt.close(fig)
         
         # plt.show()
-    imagesToVideo.images_to_video(data, 60, "testPlot")
+    imagesToVideo.images_to_video(statsImages, 60, "testPlot")
 

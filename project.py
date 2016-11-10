@@ -486,6 +486,7 @@ def main():
         # imagesToVideo.images_to_video(court_images, fps, video_path)
 
         distance_travelled, num_jumps_of_each_player = generate_statistics(all_selected_players_feet, all_is_jumping)
+
         # TODO: use the statistics generated here to draw the tables
         util.drawStatsTable(distance_travelled, num_jumps_of_each_player)
     elif operation == "cut":
