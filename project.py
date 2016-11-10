@@ -96,7 +96,6 @@ def inverse_homography_mapping(video_image, first_frame, inverse_homography_matr
 def stitchImages(base, other_images, H_arr):
     h1, w1, _ = base.shape
     base_corners = np.float32([[0, 0], [w1, 0], [w1, h1], [0, h1]]).reshape(-1, 1, 2)
-
     transformed_images = []
     min_x = 0
     min_y = 0
@@ -139,7 +138,7 @@ def stitchImages(base, other_images, H_arr):
 
         gray_transformed_img = cv2.cvtColor(transformed_img, cv2.COLOR_BGR2GRAY) # image to add in existing result
         gray_transformed_img = cv2.erode(gray_transformed_img, kernel, iterations = 1)
-        _, mask = cv2.threshold(gray_transformed_img, 30, 255, cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(gray_transformed_img, 10, 255, cv2.THRESH_BINARY)
         mask_inverse = cv2.bitwise_not(mask)
         region_of_interest = cv2.bitwise_and(transformed_img, transformed_img, mask=mask)
         prev_result = cv2.bitwise_and(result, result, mask=mask_inverse)
@@ -209,13 +208,15 @@ def usage():
     print "usage: " + sys.argv[0] + \
         " -o <operation>" + \
         " -f <filename>" + \
-        " [optional] -s <starting_frame_for_handpick> -t <second_for_video_cutting"
+        " [optional] -s <starting_frame_for_handpick_or_topdown> " + \
+        " [optional] -d <destination_video_for_video_stitching> " + \
+        " [optional] -t <second_for_video_cutting>"
 
 
 def main():
     video_file = operation = None
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'o:f:s:t:')
+        opts, args = getopt.getopt(sys.argv[1:], 'o:f:s:t:d:')
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -229,6 +230,8 @@ def main():
             starting_frame = int(a)
         elif o == '-t':
             cut_second = util.int_or_float(a)
+        elif o == '-d':
+            destination_video = int(a)
         else:
             assert False, "unhandled option"
 
@@ -237,7 +240,7 @@ def main():
         usage()
         sys.exit(2)
 
-    if operation != 'concatenate':
+    if operation != 'concatenate' and operation != 'stitch':
         video_file_name, _ = video_file.split('.')
         initFolder(video_file)
 
@@ -338,7 +341,7 @@ def main():
         - top left, bottom left, top right, bottom right
         """
         # selected_court_pixels = handpickPixel.handpick_image(court_image)[0]
-        selected_court_pixels = [[63, 86], [60, 248], [388, 84], [386, 246]]
+        selected_court_pixels = [[137, 140], [137, 498], [855, 139], [854, 498]]
 
         stitched_video_path = os.path.join(video_file_name, video_file_name + '.avi')
         video_images, fps = util.get_all_frame_images_and_fps(stitched_video_path)
@@ -497,6 +500,52 @@ def main():
         util.cut_video(video_file, cut_second)
 
         print "Video is cut successfully."
+    elif operation == 'stitch':
+        if len(video_file.split(',')) != 2:
+            print('Please give two file names for -f')
+            exit(2)
+        elif destination_video is None or destination_video < 1 or destination_video > 2:
+            print('Invalid destination_video')
+            exit(2)
+
+        video1, video2 = video_file.split(',')
+        video1_folder_name, video1_index = video1.split('.')[0].split('_')
+        video2_folder_name, video2_index = video2.split('.')[0].split('_')
+        video1_path = os.path.join(video1_folder_name, video1)
+        video2_path = os.path.join(video2_folder_name, video2)
+        video1_images, fps_1 = util.get_all_frame_images_and_fps(video1_path)
+        video2_images, fps_2 = util.get_all_frame_images_and_fps(video2_path)
+
+        cv2.imshow('second video first frame', video2_images[0])
+        video1_selected_pixels = handpickPixel.handpick_image(video1_images[-1])[0]
+        cv2.destroyAllWindows()
+        cv2.imshow('previously picked position', imageMarker.mark_image_at_points(video1_images[-1], video1_selected_pixels, 9))
+        video2_selected_pixels = handpickPixel.handpick_image(video2_images[0], [])[0]
+
+        transformed_images = []
+        if destination_video == 1:
+            H, _ = cv2.findHomography(np.float32(video2_selected_pixels), np.float32(video1_selected_pixels), cv.CV_RANSAC)
+            H_arr = []
+            for _ in range(len(video1_images)):
+                H_arr.append(np.identity(3))
+            for _ in range(len(video2_images)):
+                H_arr.append(H)
+            panaroma_image, stitch_results = stitchImages(video1_images[-1], video1_images + video2_images, H_arr)
+        else:
+            H, _ = cv2.findHomography(np.float32(video1_selected_pixels), np.float32(video2_selected_pixels), cv.CV_RANSAC)
+            H_arr = []
+            for _ in range(len(video1_images)):
+                H_arr.append(H)
+            for _ in range(len(video2_images)):
+                H_arr.append(np.identity(3))
+            panaroma_image, stitch_results = stitchImages(video2_images[0], video1_images + video2_images, H_arr)
+
+        cv2.imshow('panorama image', np.array(panaroma_image))
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        output_video_path = os.path.join(video1_folder_name, video1_folder_name + '_' + video1_index + 'n' + video2_index)
+        imagesToVideo.images_to_video(stitch_results, int((fps_1 + fps_2) / 2), output_video_path)
+
     elif operation == "concatenate":
         video_files = video_file.split(",")
         util.concatenate_video(video_files)

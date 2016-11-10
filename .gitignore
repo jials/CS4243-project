@@ -3,6 +3,11 @@ beachVolleyball1/
 beachVolleyball2/
 beachVolleyball3/
 beachVolleyball4/
+beachVolleyball4_1/
+beachVolleyball4_1n2n3n4/
+beachVolleyball4_2/
+beachVolleyball4_3/
+beachVolleyball4_4/
 beachVolleyball5/
 beachVolleyball6/
 beachVolleyball7/
@@ -12,10 +17,20 @@ beachVolleyball1.mov
 beachVolleyball2.mov
 beachVolleyball3.mov
 beachVolleyball4.mov
+beachVolleyball4_1.avi
+beachVolleyball4_2.avi
+beachVolleyball4_3.avi
+beachVolleyball4_4.avi
 beachVolleyball5.mov
 beachVolleyball6.mov
 beachVolleyball7.mov
 *.avi
+
+# pickle file
+beachVolleyball4_1.pickle
+beachVolleyball4_2.pickle
+beachVolleyball4_3.pickle
+beachVolleyball4_4.pickle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
