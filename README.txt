@@ -37,7 +37,7 @@ User may include the optional parameter with the value of -1 to generate the top
 ----------
 * Compulsory parameter: -d
 
-This command allows user to stitch two videos into one, the parameter -d is to indicate which video to be stitched to, if 1 is indicated, then the second video will be stitched to the first video.
+This command allows user to stitch two videos that have different camera position and/or angle into one video with the same camera position and angle, the parameter -d is to indicate which camera angle and position to follow, if 1 is indicated, then the second video will be stitched to the first video with first video camera position and angle.
 - Command to execute: python project.py -o stitch -f beachVolleyball1_first.avi,beachVolleyball1_second.avi -d 1
 
 -------
