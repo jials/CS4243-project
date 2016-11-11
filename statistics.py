@@ -4,6 +4,7 @@ matplotlib.use('TkAgg')
 import math 
 import numpy as np
 import matplotlib.pyplot as plt
+import util
 
 def calculate_distance(pointA, pointB):
     # length of an actual beach volleyball court (in meters)
@@ -81,4 +82,4 @@ def draw_stats_table(distances, jumps, video_file_name):
         plt.clf()
         plt.close(fig)
         
-    images_to_video(statsImages, 60, video_file_name) 
+    util.images_to_video(statsImages, 60, video_file_name) 
