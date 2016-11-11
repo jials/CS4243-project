@@ -3,6 +3,27 @@ import numpy as np
 import imageMarker
 import convolution
 import os
+import util
+
+def mark_corners_on_all_images(images, folder_name):
+    marked_images = []
+    marked_frame_coordinates = []
+    for i in range(len(images)):
+    # for i in range(3):
+        print('frame', i, 'out of', len(images))
+        image_name = os.path.join(folder_name, 'corners', 'frame' + str(i) + '.jpg')
+        marked_image, marked_coordinates = markCornerOnImage(images[i], image_name)
+        marked_frame_coordinates.append(marked_coordinates)
+        marked_images.append(marked_image)
+    return marked_images
+
+def video_to_corner_detection(video_file):
+    video_images, fps = util.get_all_frame_images_and_fps(video_file)
+    video_file_name, _ = video_file.split('.')
+    if not os.path.isdir('./' + video_file_name + '/corners'):
+        os.mkdir(video_file_name + '/corners')
+    marked_images = mark_corners_on_all_images(video_images, video_file_name)
+    return marked_images, fps
 
 def gauss_kernels(size,sigma=1.0):
     ## returns a 2d gaussian kernel

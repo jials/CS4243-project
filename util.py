@@ -186,6 +186,17 @@ def images_to_video(images, fps, videoName):
         video.write(images[i])
     video.release()
 
+def get_last_coordinates_with_status_arr(coordinates, status_arr):
+    last_coordinates = []
+    for coord_index in range(len(coordinates[-1])):
+        for st_index in range(len(status_arr) - 1, -1, -1):
+            if status_arr[st_index][coord_index] == 1:
+                last_coordinates.append(coordinates[st_index][coord_index])
+                break
+        if len(last_coordinates) - 1 < coord_index:
+            last_coordinates.append([50, 50])
+    return last_coordinates
+    
 # unused homography mapping
 def homography_mapping(video_image, first_frame, homography_matrix):
     """

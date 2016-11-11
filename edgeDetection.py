@@ -3,6 +3,16 @@ import numpy as np
 import convolution
 from math import sqrt
 import os
+import util
+
+def video_to_sobel_edge_detection(video_file):
+    video_images, fps = util.get_all_frame_images_and_fps(video_file)
+    video_file_name, _ = video_file.split('.')
+    if not os.path.isdir('./' + video_file_name + '/edge'):
+        os.mkdir(video_file_name + '/edge')
+
+    edge_images = detect_edges(video_images, video_file_name)
+    return edge_images, fps
 
 def get_strength(horizontal_sum, vertical_sum):
     return sqrt(horizontal_sum * horizontal_sum + vertical_sum * vertical_sum)

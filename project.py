@@ -17,46 +17,6 @@ import util
 import imageMarker
 import statistics
 
-def video_to_sobel_edge_detection(video_file):
-    video_images, fps = util.get_all_frame_images_and_fps(video_file)
-    video_file_name, _ = video_file.split('.')
-    if not os.path.isdir('./' + video_file_name + '/edge'):
-        os.mkdir(video_file_name + '/edge')
-
-    edge_images = edgeDetection.detect_edges(video_images, video_file_name)
-    return edge_images, fps
-
-def mark_corners_on_all_images(images, folder_name):
-    marked_images = []
-    marked_frame_coordinates = []
-    for i in range(len(images)):
-    # for i in range(3):
-        print('frame', i, 'out of', len(images))
-        image_name = os.path.join(folder_name, 'corners', 'frame' + str(i) + '.jpg')
-        marked_image, marked_coordinates = cornerDetection.markCornerOnImage(images[i], image_name)
-        marked_frame_coordinates.append(marked_coordinates)
-        marked_images.append(marked_image)
-    return marked_images
-
-def video_to_corner_detection(video_file):
-    video_images, fps = util.get_all_frame_images_and_fps(video_file)
-    video_file_name, _ = video_file.split('.')
-    if not os.path.isdir('./' + video_file_name + '/corners'):
-        os.mkdir(video_file_name + '/corners')
-    marked_images = mark_corners_on_all_images(video_images, video_file_name)
-    return marked_images, fps
-
-def get_last_coordinates_with_status_arr(coordinates, status_arr):
-    last_coordinates = []
-    for coord_index in range(len(coordinates[-1])):
-        for st_index in range(len(status_arr) - 1, -1, -1):
-            if status_arr[st_index][coord_index] == 1:
-                last_coordinates.append(coordinates[st_index][coord_index])
-                break
-        if len(last_coordinates) - 1 < coord_index:
-            last_coordinates.append([50, 50])
-    return last_coordinates
-
 def stitchImages(base, other_images, H_arr):
     h1, w1, _ = base.shape
     base_corners = np.float32([[0, 0], [w1, 0], [w1, h1], [0, h1]]).reshape(-1, 1, 2)
@@ -162,12 +122,12 @@ def main():
         util.initFolder(video_file)
 
     if operation == 'edge':
-        images, fps = video_to_sobel_edge_detection(video_file)
+        images, fps = edgeDetection.video_to_sobel_edge_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_sobel_edge')
         util.grayscale_image_to_video(images, fps, video_path)
 
     elif operation == 'corner':
-        images, fps = video_to_corner_detection(video_file)
+        images, fps = cornerDetection.video_to_corner_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_corner')
         util.images_to_video(images, fps, video_path)
 
@@ -207,7 +167,7 @@ def main():
                 selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)[0]
                 all_selected_pixels.append(selected_pixels)
                 temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(video_images[start_index: min(len(video_images), start_index + skip_frame + 1)], selected_pixels)
-                estimated_pixels = get_last_coordinates_with_status_arr(marked_frame_coordinates, status_arr)
+                estimated_pixels = util.get_last_coordinates_with_status_arr(marked_frame_coordinates, status_arr)
                 marked_images = marked_images + temp_marked_images
             cv2.destroyAllWindows()
             util.save_coordinates(video_file_name, all_selected_pixels)
