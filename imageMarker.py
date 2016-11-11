@@ -10,6 +10,7 @@ violet = np.uint8([255, 0, 139])
 colors = [red, orange, yellow, green, blue, indigo, violet]
 
 default_color = np.uint8([255, 128, 0])
+
 def mark_image_at_point(img, y, x, size, color = default_color):
     if size < 1:
         size = 1
@@ -33,7 +34,7 @@ def mark_image_at_point(img, y, x, size, color = default_color):
         img[max_y - 2][x_offset] = color
 
     return img
-
+ 
 def mark_image_at_points(img, coordinates, size):
     result = img.copy()
     for index, coordinate in enumerate(coordinates):

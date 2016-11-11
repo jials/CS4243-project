@@ -1,14 +1,14 @@
-import matplotlib
-matplotlib.use('TkAgg')
-
 import pickle
 import os
-import imagesToVideo
 import cv2
 import cv2.cv as cv
 import numpy as np
-import matplotlib.pyplot as plt
 import math
+
+def initFolder(video_file):
+    video_file_name, _ = video_file.split('.')
+    if not os.path.isdir('./' + video_file_name):
+        os.mkdir(video_file_name)
 
 def int_or_float(s):
     try:
@@ -110,9 +110,9 @@ def concatenate_video(video_files, video_file_name):
 
         concatenatedVideo.append(eachFrame)
 
-    print "successfully concatenated videos"
+    images_to_video(concatenatedVideo, fps, video_file_name)
 
-    imagesToVideo.images_to_video(concatenatedVideo, fps, video_file_name)
+    print "successfully concatenated videos"
 
     cap.release()
 
@@ -133,20 +133,18 @@ def cut_video(video_file, cut_second):
 
     images = []
     cut_index = int(cut_second  * fps)
-    print "cut_index", cut_index
     for fr in range(0, cut_index):
         _, img = cap.read()
         images.append(img)
 
-    print "len of images: ", len(images)
-    imagesToVideo.images_to_video(images, fps, first_part_filename)
+    images_to_video(images, fps, first_part_filename)
 
     images = []
     for fr in range(cut_index, frame_count):
         _, img = cap.read()
         images.append(img)
 
-    imagesToVideo.images_to_video(images, fps, second_part_filename)
+    images_to_video(images, fps, second_part_filename)
 
 def get_all_frame_images_and_fps(video_file):
     cap = cv2.VideoCapture(video_file)
@@ -165,49 +163,61 @@ def get_all_frame_images_and_fps(video_file):
         _, img = cap.read()
         images.append(img)
     cap.release()
-    return images, fps
+    return images, fps 
 
-def drawStatsTable(distances, jumps, video_file_name):
-    statsImages = []
-    video_file_name = video_file_name + "_stats"
-    # video_file_name = "stats"
+def grayscale_image_to_video(images, fps, videoName):
+    height , width =  images[0].shape
 
-    _, N = np.shape(distances)
-    # N=5
+    fourcc = cv2.cv.CV_FOURCC('m', 'p', '4', 'v')
+    video = cv2.VideoWriter(videoName + '.avi',fourcc,fps,(width,height))
 
-    for i in xrange(N):
-        fig = plt.figure()
-        plt.axis('off')
-        ax = plt.gca()
+    for i in range(len(images)):
+        rgb_image = cv2.cvtColor(np.uint8(images[i]), cv2.COLOR_GRAY2BGR)
+        video.write(rgb_image)
+    video.release()
 
-        colLabels = ['Player', 'Distance(m)', 'Jump']
-        rowLabels = ['', '', '', '']
+def images_to_video(images, fps, videoName):
+    height, width, _ = images[0].shape
 
-        tableValues =[['',round(distances[0][i], 2),jumps[0][i]],
-                        ['',round(distances[1][i], 2),jumps[1][i]],
-                        ['',round(distances[2][i], 2),jumps[2][i]],
-                        ['',round(distances[3][i], 2),jumps[3][i]]]
+    fourcc = cv2.cv.CV_FOURCC('m', 'p', '4', 'v')
+    video = cv2.VideoWriter(videoName + '.avi',fourcc,fps,(width,height))
 
-        # colours for each players in the following order: Red, Yellow, Green, Blue
-        colours = [[(0, 0, 0.8), (1, 1, 1), (1, 1, 1)],
-                    [(0, 1, 1), (1, 1, 1), (1, 1, 1)],
-                    [(0, 0.8, 0), (1, 1, 1), (1, 1, 1)],
-                    [(0.8, 0, 0), (1, 1, 1), (1, 1, 1)]]
-       
-        the_table = plt.table(cellText=tableValues, cellColours=colours, rowLoc='right', rowLabels=rowLabels,
-                             colWidths=[.3]*3, colLoc='center', colLabels=colLabels, loc='center')
-        the_table.auto_set_font_size(False)
-        the_table.set_fontsize(20)
-        the_table.scale(1, 6)
-        fig.canvas.draw()
+    for i in range(len(images)):
+        video.write(images[i])
+    video.release()
 
-        # Now we can save it to a numpy array.
-        data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        statsImages.append(data)
+# unused homography mapping
+def homography_mapping(video_image, first_frame, homography_matrix):
+    """
+    Calculate the new position of where the pixel should be at after multiplying the original position with the
+    homography matrix
+    """
+    new_video_image = np.zeros_like(first_frame)
+    height, width, _ = first_frame.shape
+    for h in range(height):
+        for w in range(width):
+            # convert pixel to 3-D point by appending depth as 1
+            point = np.append([w, h], [1])
+            new_pos_x, new_pos_y, new_pos_z = np.dot(homography_matrix, point)
+            new_pos_x, new_pos_y = int(new_pos_x), int(new_pos_y)
+            try:
+                new_video_image[new_pos_y][new_pos_x] = video_image[h][w]
+            except IndexError:
+                continue
+    return new_video_image
 
-        plt.clf()
-        plt.close(fig)
-        
-        # plt.show()
-    imagesToVideo.images_to_video(statsImages, 60, video_file_name)
+# unused inverse homography mapping
+def inverse_homography_mapping(video_image, first_frame, inverse_homography_matrix):
+    new_video_image = np.zeros_like(first_frame)
+    height, width, _ = first_frame.shape
+    for h in range(height):
+        for w in range(width):
+            # convert pixel to 3-D point by appending depth as 1
+            point = np.append([w, h], [1])
+            new_pos_x, new_pos_y, new_pos_z = np.dot(inverse_homography_matrix, point)
+            new_pos_x, new_pos_y = int(new_pos_x), int(new_pos_y)
+            try:
+                new_video_image[h][w] = video_image[new_pos_y][new_pos_x]
+            except IndexError:
+                continue
+    return new_video_image

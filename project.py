@@ -4,8 +4,6 @@ import numpy as np
 import numpy.linalg as la
 import os
 import sys
-import multiprocessing
-from joblib import Parallel, delayed
 import math
 
 import cv2
@@ -15,9 +13,9 @@ import changeDetection
 import cornerDetection
 import edgeDetection
 import handpickPixel
-import imagesToVideo
 import util
 import imageMarker
+import statistics
 
 def video_to_sobel_edge_detection(video_file):
     video_images, fps = util.get_all_frame_images_and_fps(video_file)
@@ -48,26 +46,7 @@ def video_to_corner_detection(video_file):
     marked_images = mark_corners_on_all_images(video_images, video_file_name)
     return marked_images, fps
 
-def homography_mapping(video_image, first_frame, homography_matrix):
-    """
-    Calculate the new position of where the pixel should be at after multiplying the original position with the
-    homography matrix
-    """
-    new_video_image = np.zeros_like(first_frame)
-    height, width, _ = first_frame.shape
-    for h in range(height):
-        for w in range(width):
-            # convert pixel to 3-D point by appending depth as 1
-            point = np.append([w, h], [1])
-            new_pos_x, new_pos_y, new_pos_z = np.dot(homography_matrix, point)
-            new_pos_x, new_pos_y = int(new_pos_x), int(new_pos_y)
-            try:
-                new_video_image[new_pos_y][new_pos_x] = video_image[h][w]
-            except IndexError:
-                continue
-    return new_video_image
-
-def getLastCoordinatesWithStatusArr(coordinates, status_arr):
+def get_last_coordinates_with_status_arr(coordinates, status_arr):
     last_coordinates = []
     for coord_index in range(len(coordinates[-1])):
         for st_index in range(len(status_arr) - 1, -1, -1):
@@ -77,21 +56,6 @@ def getLastCoordinatesWithStatusArr(coordinates, status_arr):
         if len(last_coordinates) - 1 < coord_index:
             last_coordinates.append([50, 50])
     return last_coordinates
-
-def inverse_homography_mapping(video_image, first_frame, inverse_homography_matrix):
-    new_video_image = np.zeros_like(first_frame)
-    height, width, _ = first_frame.shape
-    for h in range(height):
-        for w in range(width):
-            # convert pixel to 3-D point by appending depth as 1
-            point = np.append([w, h], [1])
-            new_pos_x, new_pos_y, new_pos_z = np.dot(inverse_homography_matrix, point)
-            new_pos_x, new_pos_y = int(new_pos_x), int(new_pos_y)
-            try:
-                new_video_image[h][w] = video_image[new_pos_y][new_pos_x]
-            except IndexError:
-                continue
-    return new_video_image
 
 def stitchImages(base, other_images, H_arr):
     h1, w1, _ = base.shape
@@ -156,53 +120,8 @@ def stitchImages(base, other_images, H_arr):
 
         result = cv2.add(np.uint8(prev_result), np.uint8(region_of_interest))
         stitch_results[index] = result
-    #     cv2.imshow(str(index), result)
-    #     cv2.waitKey(0)
-    # cv2.destroyAllWindows()
 
     return panaroma_image, stitch_results
-
-def calculate_distance(pointA, pointB):
-    # length of an actual beach volleyball court (in meters)
-    standard_court_length = 16
-    length_pixel = 718
-
-    A_x, A_y = pointA[0], pointA[1]
-    B_x, B_y = pointB[0], pointB[1]
-    return math.sqrt((B_x - A_x) * (B_x - A_x) + (B_y - A_y) * (B_y - A_y)) / length_pixel * standard_court_length
-
-def generate_statistics(all_selected_players_feet, all_is_jumping):
-    """
-        Generate statistics of the match
-        Distance travelled by each players, Number of jumps of each players
-    """
-    # calculate the distance travelled by 4 different players
-    distance_travelled = [[0] for _ in range(4)]
-    for idx, selected_players_feet in enumerate(all_selected_players_feet[:-1]):
-        for i in range(min(4, len(selected_players_feet))):
-            next_frame_player_position = all_selected_players_feet[idx + 1][i]
-            distance = distance_travelled[i][-1] + calculate_distance(selected_players_feet[i],
-                                                                      next_frame_player_position)
-            distance_travelled[i].append(distance)
-
-        for i in range(len(selected_players_feet), 4):
-            distance_travelled[i].append(0)
-
-    # calculate the number of time each player jumps each frame
-    num_jumps_of_each_player = [[0] for _ in range(4)]
-    for idx, is_jumping in enumerate(all_is_jumping[:-1]):
-        for i in range(min(4, len(is_jumping))):
-            jump_cnt = num_jumps_of_each_player[i][-1]
-            if all_is_jumping[idx][i] is False and all_is_jumping[idx + 1][i] is True:
-                jump_cnt += 1
-            num_jumps_of_each_player[i].append(jump_cnt)
-
-    return distance_travelled, num_jumps_of_each_player
-
-def initFolder(video_file):
-    video_file_name, _ = video_file.split('.')
-    if not os.path.isdir('./' + video_file_name):
-        os.mkdir(video_file_name)
 
 def usage():
     print "usage: " + sys.argv[0] + \
@@ -211,7 +130,6 @@ def usage():
         " [optional] -s <starting_frame_for_handpick_or_topdown> " + \
         " [optional] -d <destination_video_for_video_stitching> " + \
         " [optional] -t <second_for_video_cutting>"
-
 
 def main():
     video_file = operation = None
@@ -235,24 +153,23 @@ def main():
         else:
             assert False, "unhandled option"
 
-
     if video_file is None or operation is None:
         usage()
         sys.exit(2)
 
     if operation != 'concatenate' and operation != 'stitch':
         video_file_name, _ = video_file.split('.')
-        initFolder(video_file)
+        util.initFolder(video_file)
 
     if operation == 'edge':
         images, fps = video_to_sobel_edge_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_sobel_edge')
-        imagesToVideo.grayscale_image_to_video(images, fps, video_path)
+        util.grayscale_image_to_video(images, fps, video_path)
 
     elif operation == 'corner':
         images, fps = video_to_corner_detection(video_file)
         video_path = os.path.join(video_file_name, video_file_name + '_corner')
-        imagesToVideo.images_to_video(images, fps, video_path)
+        util.images_to_video(images, fps, video_path)
 
     elif operation == 'handpick':
         if len(opts) < 3:
@@ -290,7 +207,7 @@ def main():
                 selected_pixels = handpickPixel.handpick_image(start_frame, estimated_pixels)[0]
                 all_selected_pixels.append(selected_pixels)
                 temp_marked_images, marked_frame_coordinates, status_arr = changeDetection.mark_features_on_all_images(video_images[start_index: min(len(video_images), start_index + skip_frame + 1)], selected_pixels)
-                estimated_pixels = getLastCoordinatesWithStatusArr(marked_frame_coordinates, status_arr)
+                estimated_pixels = get_last_coordinates_with_status_arr(marked_frame_coordinates, status_arr)
                 marked_images = marked_images + temp_marked_images
             cv2.destroyAllWindows()
             util.save_coordinates(video_file_name, all_selected_pixels)
@@ -317,7 +234,7 @@ def main():
 
         if len(stitch_results) > 0:
             video_path = os.path.join(video_file_name, video_file_name)
-            imagesToVideo.images_to_video(stitch_results, 3, video_path)
+            util.images_to_video(stitch_results, 3, video_path)
 
         if len(panaroma_image) > 0:
             image_name = os.path.join(video_file_name, video_file_name + '.jpg')
@@ -325,11 +242,11 @@ def main():
 
         # print 'Done with homography calculation. Writing to file now...'
         video_path = os.path.join(video_file_name, video_file_name + '_homography')
-        imagesToVideo.images_to_video(new_video_images, fps / skip_frame, video_path)
+        util.images_to_video(new_video_images, fps / skip_frame, video_path)
 
         if len(marked_images) > 0:
             video_path = os.path.join(video_file_name, video_file_name + '_traced')
-            imagesToVideo.images_to_video([marked_images[index] for index in range(0, len(marked_images), skip_frame)], fps/skip_frame, video_path)
+            util.images_to_video([marked_images[index] for index in range(0, len(marked_images), skip_frame)], fps/skip_frame, video_path)
 
     elif operation == 'topdown':
         if len(opts) < 3:
@@ -384,7 +301,6 @@ def main():
                         video_images[index: index + 2], selected_players_feet)
                     estimated_pixels = marked_frame_coordinates[-1]
 
-
             cv2.destroyAllWindows()
 
             util.save_players_feet(video_file_name, all_selected_players_feet)
@@ -398,7 +314,6 @@ def main():
         ball_positions = cv2.perspectiveTransform(np.float32(ball_positions).reshape(-1, 1, 2), H).reshape(-1, 2)
         for idx, selected_players_feet in enumerate(all_selected_players_feet):
             all_selected_players_feet[idx] = cv2.perspectiveTransform(np.float32(selected_players_feet).reshape(-1, 1, 2), H).reshape(-1, 2)
-
 
         #fill up frame without ball position
         indexes_with_ball_positions = np.where(np.array(has_ball_positions) == True)[0]
@@ -485,13 +400,13 @@ def main():
         #     cv2.waitKey(0)
         # cv2.destroyAllWindows()
         video_path = os.path.join(video_file_name, video_file_name + '_court')
-        imagesToVideo.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
-        # imagesToVideo.images_to_video(court_images, fps, video_path)
+        util.images_to_video(court_images, fps * (frames_to_add + 1), video_path)
+        # util.images_to_video(court_images, fps, video_path)
 
-        distance_travelled, num_jumps_of_each_player = generate_statistics(all_selected_players_feet, all_is_jumping)
+        distance_travelled, num_jumps_of_each_player = statistics.generate_statistics(all_selected_players_feet, all_is_jumping)
 
-        # TODO: use the statistics generated here to draw the tables
-        util.drawStatsTable(distance_travelled, num_jumps_of_each_player, video_file_name)
+        statistics.draw_stats_table(distance_travelled, num_jumps_of_each_player, video_file_name)
+
     elif operation == "cut":
         if len(opts) < 3:
             print "Second of video to cut is not indicated."
@@ -500,6 +415,7 @@ def main():
         util.cut_video(video_file, cut_second)
 
         print "Video is cut successfully."
+
     elif operation == 'stitch':
         if len(video_file.split(',')) != 2:
             print('Please give two file names for -f')
@@ -544,17 +460,16 @@ def main():
         cv2.waitKey(0)
         cv2.destroyAllWindows()
         output_video_path = os.path.join(video1_folder_name, video1_folder_name + '_' + video1_index + 'n' + video2_index)
-        imagesToVideo.images_to_video(stitch_results, int((fps_1 + fps_2) / 2), output_video_path)
+        util.images_to_video(stitch_results, int((fps_1 + fps_2) / 2), output_video_path)
 
     elif operation == "concatenate":
         video_files = video_file.split(",")
         video_file_name, _ = video_files[0].split('.')
         util.concatenate_video(video_files, video_file_name)
-        return
+
     else:
         print 'Operation is not supported.'
         sys.exit(2)
-
 
 if __name__ == '__main__':
     main()
