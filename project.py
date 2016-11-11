@@ -165,7 +165,7 @@ def stitchImages(base, other_images, H_arr):
 def calculate_distance(pointA, pointB):
     # length of an actual beach volleyball court (in meters)
     standard_court_length = 16
-    length_pixel = 324
+    length_pixel = 718
 
     A_x, A_y = pointA[0], pointA[1]
     B_x, B_y = pointB[0], pointB[1]
@@ -472,13 +472,13 @@ def main():
             for idx, player_feet in enumerate(selected_players_feet):
                 if idx >= 4:
                     break
-                cv2.circle(new_court_image, tuple(player_feet), 5, colors[idx], 6)
+                cv2.circle(new_court_image, tuple(player_feet), 10, colors[idx], 10)
                 if is_jumping[idx]:
-                    cv2.circle(new_court_image, tuple(player_feet), 5, (0, 0, 0), 3)
+                    cv2.circle(new_court_image, tuple(player_feet), 10, (0, 0, 0), 6)
 
             #draw ball position
             if has_ball_position:
-                cv2.circle(new_court_image, tuple(ball_position), 2, (255, 255, 255), 2)
+                cv2.circle(new_court_image, tuple(ball_position), 4, (255, 255, 255), 4)
 
             court_images.append(new_court_image)
         #     cv2.imshow('court image', new_court_image)
@@ -548,7 +548,8 @@ def main():
 
     elif operation == "concatenate":
         video_files = video_file.split(",")
-        util.concatenate_video(video_files)
+        video_file_name, _ = video_files[0].split('.')
+        util.concatenate_video(video_files, video_file_name)
         return
     else:
         print 'Operation is not supported.'

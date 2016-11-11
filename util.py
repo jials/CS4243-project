@@ -60,10 +60,8 @@ def save_ball_positions(video_file, ball_positions):
     with open(video_path, 'wb') as f:
         pickle.dump(ball_positions, f, pickle.HIGHEST_PROTOCOL)
 
-def concatenate_video(video_files):
-    if not os.path.isdir('./concatenatedVideos'):
-        os.mkdir('concatenatedVideos')
-
+def concatenate_video(video_files, video_file_name):
+    video_file_name = video_file_name + "_concatenated"
     cap = cv2.VideoCapture(video_files[0])
     frame_width = int(cap.get(cv.CV_CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv.CV_CAP_PROP_FRAME_HEIGHT))
@@ -114,7 +112,7 @@ def concatenate_video(video_files):
 
     print "successfully concatenated videos"
 
-    imagesToVideo.images_to_video(concatenatedVideo, fps, "concatenate_test")
+    imagesToVideo.images_to_video(concatenatedVideo, fps, video_file_name)
 
     cap.release()
 
@@ -169,51 +167,38 @@ def get_all_frame_images_and_fps(video_file):
     cap.release()
     return images, fps
 
-def drawTable(data):
-    fig = plt.figure()
-    ax = plt.gca()
-    ax.set_title('Statistic')
-
-    colLabels = ['Travel Distance', 'Number of Jump']
-    rowLabels = ['Player1', 'Player2', 'Player3', 'Player4']
-    tableValues =[[11,12,13],[21,22,23],[31,32,33]]
-
-    the_table = plt.table(cellText=tableValues, rowLoc='right', rowLabels=rowLabels,
-                         colWidths=[.5,.5], colLabels=colLabels,
-                         colLoc='center', loc='center')
-
-    plt.show()
-    # the_table = plt.table(cellText=tableValues, rowLoc='right',
-                         # rowColours=colors, rowLabels=rowLabels,
-                         # colWidths=[.5,.5], colLabels=colLabels,
-                         # colLoc='center', loc='center')
-
 def drawStatsTable(distances, jumps, video_file_name):
     statsImages = []
     video_file_name = video_file_name + "_stats"
+    # video_file_name = "stats"
 
     _, N = np.shape(distances)
+    # N=5
+
     for i in xrange(N):
         fig = plt.figure()
         plt.axis('off')
         ax = plt.gca()
 
-        colLabels = ['Player', 'Travel Distance(m)', 'Number of Jump']
+        colLabels = ['Player', 'Distance(m)', 'Jump']
         rowLabels = ['', '', '', '']
 
         tableValues =[['',round(distances[0][i], 2),jumps[0][i]],
                         ['',round(distances[1][i], 2),jumps[1][i]],
                         ['',round(distances[2][i], 2),jumps[2][i]],
                         ['',round(distances[3][i], 2),jumps[3][i]]]
+
         # colours for each players in the following order: Red, Yellow, Green, Blue
-        colours = [[(0.8, 0, 0), (1, 1, 1), (1, 1, 1)],
-                    [(1, 1, 0), (1, 1, 1), (1, 1, 1)],
+        colours = [[(0, 0, 0.8), (1, 1, 1), (1, 1, 1)],
+                    [(0, 1, 1), (1, 1, 1), (1, 1, 1)],
                     [(0, 0.8, 0), (1, 1, 1), (1, 1, 1)],
-                    [(0, 0, 0.8), (1, 1, 1), (1, 1, 1)]]
+                    [(0.8, 0, 0), (1, 1, 1), (1, 1, 1)]]
        
         the_table = plt.table(cellText=tableValues, cellColours=colours, rowLoc='right', rowLabels=rowLabels,
                              colWidths=[.3]*3, colLoc='center', colLabels=colLabels, loc='center')
-        the_table.scale(2, 8)
+        the_table.auto_set_font_size(False)
+        the_table.set_fontsize(20)
+        the_table.scale(1, 6)
         fig.canvas.draw()
 
         # Now we can save it to a numpy array.
@@ -226,4 +211,3 @@ def drawStatsTable(distances, jumps, video_file_name):
         
         # plt.show()
     imagesToVideo.images_to_video(statsImages, 60, video_file_name)
-
